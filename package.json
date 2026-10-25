@@ -2,6 +2,8 @@
   "name": "moralify",
   "version": "1.0.0",
   "description": "Desktop app that converts audio, video, image and document files",
+  "author": "Morale",
+  "license": "MIT",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -12,13 +14,30 @@
     "productName": "Moralify",
     "files": [
       "src/**/*",
+      "build/icon.png",
       "package.json"
     ],
     "asarUnpack": [
       "node_modules/ffmpeg-static/**"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Moralify",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "include": "build/installer.nsh",
+      "license": "build/license.txt"
     }
   },
   "dependencies": {
