@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'">
+  <meta name="color-scheme" content="light dark">
+  <title>Moralify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="logo.png" alt="" width="28" height="28"><span>Moralify</span></div>
+    <div class="dest">
+      <span class="pill" id="outLabel" title="">Documents\Moralify</span>
+      <button id="openBtn" class="quiet">Open</button>
+      <button id="outBtn" class="quiet">Change</button>
+      <button id="outReset" class="quiet" hidden>Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="col">
+      <section class="hello" id="empty">
+        <h1>What are we <em>converting</em> today?</h1>
+        <p>Audio, video, images and documents. Everything stays on your computer.<span id="loNote"></span></p>
+      </section>
+
+      <div id="drop" class="drop" tabindex="0" role="button" aria-label="Add files">
+        <div class="plus" aria-hidden="true">+</div>
+        <div class="dtext">
+          <strong>Drop files here</strong>
+          <span>or click to browse</span>
+        </div>
+      </div>
+
+      <ul id="list"></ul>
+    </div>
+  </main>
+
+  <footer>
+    <div class="col foot">
+      <span id="count" class="count"></span>
+      <div class="actions">
+        <button id="clear" class="quiet">Clear all</button>
+        <button id="go" disabled>Convert<span id="goN"></span></button>
+      </div>
+    </div>
+  </footer>
+  <script src="renderer.js"></script>
+</body>
+</html>

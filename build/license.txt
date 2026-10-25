@@ -1,0 +1,27 @@
+MORALIFY - TERMS AND CONDITIONS
+
+Please read these terms before installing Moralify. By clicking "I Agree" you accept them.
+
+1. LICENSE
+Moralify is free and open source software released under the MIT License.
+Copyright (c) 2026 Morale
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+2. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+3. YOUR FILES AND PRIVACY
+Moralify converts files entirely on your computer. Your files are not uploaded, and the app does not collect or send any personal data. Converted files are saved to the folder shown in the app (by default Documents\Moralify). Moralify never overwrites existing files; it saves a new copy instead.
+Conversion can change or lose quality, formatting or metadata. Keep backups of important files. You are responsible for the files you convert and for having the right to convert them.
+
+4. THIRD-PARTY SOFTWARE
+Moralify includes third-party components, each under its own license:
+- FFmpeg (audio, video and image conversion), bundled via ffmpeg-static. The FFmpeg binary is distributed under the GNU General Public License. See https://ffmpeg.org/legal.html
+- Electron (MIT), mammoth (BSD-2-Clause), marked (MIT).
+If LibreOffice is installed on your computer, Moralify can use it for Office document conversions. LibreOffice is a separate program with its own license and is not part of Moralify.
+
+5. CHANGES
+These terms may change in future versions of Moralify.
