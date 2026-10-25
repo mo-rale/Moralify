@@ -34,17 +34,14 @@ async function addPaths(paths) {
     const fmt = Object.assign(document.createElement('div'), { className: 'fmt' });
     const bar = Object.assign(document.createElement('div'), { className: 'bar', innerHTML: '<i></i>' });
 
-    const item = { path: p, format: targets[0], li, chips: [], status, bar: bar.firstChild, supported: targets.length > 0, num };
+    const item = { path: p, ext, targets, format: targets[0], li, chips: [], status, bar: bar.firstChild, supported: targets.length > 0, num };
 
     if (targets.length) {
       fmt.append(Object.assign(document.createElement('span'), { className: 'from', textContent: ext }),
                  Object.assign(document.createElement('span'), { className: 'to', textContent: '→' }));
       for (const t of targets) {
         const chip = Object.assign(document.createElement('button'), { className: 'chip' + (t === item.format ? ' on' : ''), textContent: t });
-        chip.onclick = () => {
-          item.format = t;
-          item.chips.forEach((c) => c.classList.toggle('on', c === chip));
-        };
+        chip.onclick = () => setFormat(item, t);
         item.chips.push(chip);
         fmt.append(chip);
       }
@@ -62,7 +59,34 @@ async function addPaths(paths) {
   refresh();
 }
 
+const VIDEO_EXT = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'flv', 'wmv', 'm4v', 'mpg', '3gp'];
+
+function setFormat(item, t) {
+  item.format = t;
+  item.chips.forEach((c) => c.classList.toggle('on', c.textContent === t));
+}
+
+// "Set all to" shortcuts: formats every file can become, plus a one-click video -> MP3.
+function renderBulk() {
+  const bulk = $('bulk');
+  bulk.replaceChildren();
+  const ok = [...items.values()].filter((i) => i.supported);
+  const videos = ok.filter((i) => VIDEO_EXT.includes(i.ext) && i.targets.includes('mp3'));
+  const common = ok.length > 1 ? ok[0].targets.filter((t) => ok.every((i) => i.targets.includes(t))) : [];
+  if (!videos.length && !common.length) { bulk.hidden = true; return; }
+  const add = (label, onclick, cls = 'chip') => bulk.append(Object.assign(document.createElement('button'), { className: cls, textContent: label, onclick }));
+  if (videos.length) {
+    add(`${videos.length > 1 ? 'All videos' : 'Video'} → MP3`, () => videos.forEach((i) => setFormat(i, 'mp3')), 'chip shortcut');
+  }
+  if (common.length) {
+    bulk.append(Object.assign(document.createElement('span'), { className: 'blabel', textContent: 'Set all to' }));
+    common.forEach((t) => add(t, () => ok.forEach((i) => setFormat(i, t))));
+  }
+  bulk.hidden = running;
+}
+
 function refresh() {
+  renderBulk();
   const all = [...items.values()];
   const ready = all.filter((i) => i.supported).length;
   $('go').disabled = running || !ready;

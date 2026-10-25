@@ -70,6 +70,12 @@ li.done .bar i { background: var(--ok); }
 .x { background: none; border: 0; color: var(--mute); font-size: 20px; line-height: 1; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
 .x:hover { background: var(--soft); color: var(--ink); }
 
+/* bulk shortcuts */
+.bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
+.blabel { color: var(--mute); font-size: 12.5px; margin: 0 4px 0 8px; }
+.chip.shortcut { background: var(--soft); border-color: var(--accent); color: var(--accent); }
+.chip.shortcut:hover { background: var(--accent); color: var(--on-accent); }
+
 /* footer */
 footer { border-top: 1px solid var(--line); background: var(--bg); padding: 14px 0 18px; }
 .foot.col { display: flex; align-items: center; justify-content: space-between; }

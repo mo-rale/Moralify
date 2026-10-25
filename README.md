@@ -2,10 +2,15 @@
 
 A free, open source Windows desktop app that converts audio, video, image and document files. Everything runs on your machine; nothing is uploaded.
 
+[![Watch the Moralify demo video](demo/moralify-brag.jpg)](demo/moralify-brag.mp4)
+
+*Click the image to watch the 20-second demo.*
+
 ## Features
 
 - Drag and drop files, or click to browse. Convert many files at once.
 - Pick the output format for each file by clicking a format button (`MP3 → WAV OGG FLAC ...`).
+- Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.
 - Converted files are saved to `Documents\Moralify` by default. Use **Open** to view the folder and **Change** to pick another one.
 - Never overwrites: if a file exists, the new one is saved as `name (1).ext`.
@@ -86,6 +91,9 @@ Moralify is built with Electron, [ffmpeg-static](https://github.com/eugeneware/f
 
 The bundled FFmpeg binary is distributed under the GNU GPL; see <https://ffmpeg.org/legal.html>. LibreOffice, if used, is a separate program with its own license.
 
+The demo video's music is "Happy Beats / Business Moves vol. 9" by Sascha Ende ([ende.app](https://ende.app)), licensed CC BY 4.0.
+
 ## License
 
 [MIT](LICENSE) © 2026 Morale
+
