@@ -1,0 +1,80 @@
+:root {
+  --bg:#100f0e; --rail:#171513; --card:#1b1916; --line:#2c2925; --ink:#f2ecdf; --mute:#8b857a;
+  --accent:#ff5a1f; --ok:#c9f26b; --err:#ff7a7a;
+  --display: Bahnschrift, "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { display: grid; grid-template-columns: 340px 1fr; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+.kicker { font: 11px var(--mono); letter-spacing: 1.6px; text-transform: uppercase; color: var(--mute); }
+
+/* ---- left rail ---- */
+.rail { background: var(--rail); border-right: 1px solid var(--line); padding: 32px 28px; display: flex; flex-direction: column; gap: 26px; justify-content: space-between; }
+h1 { font: 700 64px/0.95 var(--display); letter-spacing: -3px; margin: 14px 0 12px; }
+h1 em { font-style: normal; color: var(--accent); }
+.tag { color: var(--mute); margin: 0; max-width: 26ch; }
+
+.drop { position: relative; flex: 1; min-height: 190px; max-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: rgba(255,255,255,.02); transition: background .15s; }
+.drop .c { position: absolute; width: 18px; height: 18px; border: 0 solid var(--ink); transition: .18s; }
+.c.tl { top: 0; left: 0; border-width: 2px 0 0 2px; } .c.tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+.c.bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; } .c.br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+.plus { font: 300 64px/1 var(--display); color: var(--accent); transition: transform .2s; }
+.dl { font: 600 20px var(--display); letter-spacing: .5px; text-transform: uppercase; margin-top: 4px; }
+.dm { color: var(--mute); font-size: 12.5px; }
+.drop:hover, .drop:focus-visible, .drop.over { background: rgba(255,90,31,.07); outline: none; }
+.drop:hover .c, .drop.over .c, .drop:focus-visible .c { width: 30px; height: 30px; border-color: var(--accent); }
+.drop:hover .plus, .drop.over .plus { transform: rotate(90deg) scale(1.1); }
+
+.dest .path { font: 12.5px var(--mono); margin: 8px 0 12px; word-break: break-all; color: var(--ink); }
+.dbtn { display: flex; gap: 8px; }
+
+/* ---- queue ---- */
+.queue { display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+.queue header { display: flex; align-items: baseline; justify-content: space-between; padding: 32px 36px 14px; border-bottom: 1px solid var(--line); }
+.count { font: 700 40px/1 var(--display); letter-spacing: -1px; }
+main { flex: 1; overflow-y: auto; padding: 0 36px; }
+main::-webkit-scrollbar { width: 8px; } main::-webkit-scrollbar-thumb { background: var(--line); }
+
+.empty { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+.empty .big { font: 700 44px/1.05 var(--display); letter-spacing: -1.5px; color: #3a362f; }
+.empty .small { font: 12.5px var(--mono); color: var(--mute); margin-top: 12px; }
+ul:not(:empty) + .empty { display: none; }
+.empty.hide { display: none; }
+ul { list-style: none; margin: 0; padding: 0; }
+
+li { position: relative; padding: 18px 0 20px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 34px 1fr auto; gap: 6px 14px; animation: in .25s ease; }
+@keyframes in { from { opacity: 0; transform: translateX(14px); } }
+.num { font: 12px var(--mono); color: var(--mute); padding-top: 5px; }
+.name { font: 600 17px var(--display); letter-spacing: .2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { font: 12px var(--mono); color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.status.ok { color: var(--ok); } .status.err { color: var(--err); white-space: normal; }
+.fmt { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.from { font: 700 13px var(--mono); padding: 5px 9px; background: var(--card); border: 1px solid var(--line); color: var(--mute); text-transform: uppercase; }
+.to { color: var(--accent); font: 18px var(--mono); margin: 0 4px; }
+.chip { font: 600 12px var(--mono); text-transform: uppercase; padding: 5px 9px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; transition: .12s; box-shadow: none; letter-spacing: .4px; }
+.chip:hover:not(:disabled) { border-color: var(--ink); transform: none; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #140a05; }
+.chip:disabled { cursor: default; opacity: .5; }
+.chip.on:disabled { opacity: 1; }
+.bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+li.done .bar i { background: var(--ok); }
+.x { background: none; border: 0; color: var(--mute); font: 18px var(--mono); cursor: pointer; padding: 0 4px; height: 24px; }
+.x:hover { color: var(--accent); }
+
+footer { display: flex; justify-content: space-between; align-items: center; padding: 18px 36px 26px; border-top: 1px solid var(--line); }
+
+/* ---- buttons ---- */
+button { font: inherit; cursor: pointer; }
+button.line { background: none; color: var(--ink); border: 1px solid var(--line); padding: 7px 16px; font: 12px var(--mono); text-transform: uppercase; letter-spacing: 1px; transition: .12s; }
+button.line:hover:not(:disabled) { border-color: var(--ink); }
+button.line:disabled { opacity: .35; cursor: default; }
+#go { background: var(--accent); color: #140a05; border: 0; padding: 15px 34px; font: 700 18px var(--display); letter-spacing: .5px; text-transform: uppercase; transition: .15s; }
+#go b { display: inline-block; transition: transform .15s; margin-left: 6px; }
+#go:hover:not(:disabled) { background: #ff7440; }
+#go:hover:not(:disabled) b { transform: translateX(5px); }
+#go:disabled { background: var(--card); color: #4b463e; cursor: default; }
+button.link { background: none; border: 0; color: var(--ink); text-decoration: underline; padding: 0 0 0 10px; font: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

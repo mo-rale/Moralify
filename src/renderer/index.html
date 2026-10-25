@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Moralify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="rail">
+    <div>
+      <div class="kicker">File converter / offline</div>
+      <h1>Moral<em>ify</em></h1>
+      <p class="tag">Audio, video, images and documents. Converted on your machine, nothing uploaded.</p>
+    </div>
+
+    <div id="drop" class="drop" tabindex="0" role="button" aria-label="Add files">
+      <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+      <div class="plus">+</div>
+      <div class="dl">Drop files</div>
+      <div class="dm">or click to browse</div>
+    </div>
+
+    <div class="dest">
+      <div class="kicker">Output</div>
+      <div class="path" id="outLabel">Documents\Moralify</div>
+      <div class="dbtn">
+        <button id="openBtn" class="line">Open</button>
+        <button id="outBtn" class="line">Change</button>
+        <button id="outReset" class="line" hidden>Reset</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="queue">
+    <header>
+      <div class="kicker">Queue</div>
+      <div class="count" id="count">00</div>
+    </header>
+    <main>
+      <div id="empty" class="empty">
+        <div class="big">Nothing queued.</div>
+        <div class="small">Mp3 to ogg. Docx to pdf. Mov to gif.<span id="loNote"></span></div>
+      </div>
+      <ul id="list"></ul>
+    </main>
+    <footer>
+      <button id="clear" class="line">Clear</button>
+      <button id="go" disabled>Convert<span id="goN"></span> <b>&rarr;</b></button>
+    </footer>
+  </section>
+  <script src="renderer.js"></script>
+</body>
+</html>
