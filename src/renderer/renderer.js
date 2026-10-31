@@ -35,7 +35,21 @@ function renderOpts() {
   $('sizes').replaceChildren(...SIZES.map((n) => el('button', { type: 'button', className: 'chip' + (n === pic.maxSize ? ' on' : ''), textContent: n ? `${n} px` : 'Original', onclick: () => setPic({ maxSize: n }) })));
 }
 
-api.defaultOut().then((d) => { defaultDir = d; outDir = d; setOut(d); });
+// ---------- remembered choices: last output folder, and the last format picked for each file type ----------
+const FMT_KEY = 'moralify.lastFormats';
+const OUT_KEY = 'moralify.outDir';
+let lastFormats = {};
+try { lastFormats = JSON.parse(localStorage.getItem(FMT_KEY) || '{}') || {}; } catch { lastFormats = {}; }
+const remember = (key, value) => { try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch { /* ignore */ } };
+
+api.defaultOut().then((d) => {
+  defaultDir = d;
+  let saved = null;
+  try { saved = localStorage.getItem(OUT_KEY); } catch { /* ignore */ }
+  outDir = saved || d;
+  setOut(outDir);
+});
+api.onOpenPaths((paths) => addPaths(paths)); // files or folders sent by "Convert with Moralify" in Explorer
 api.hasLibreOffice().then((has) => { if (has) $('loNote').textContent = ' Office files work too.'; });
 
 function setOut(dir) {
@@ -71,7 +85,7 @@ async function addFile(p) {
   const fmt = el('div', { className: 'fmt' });
   const bar = el('div', { className: 'bar', innerHTML: '<i></i>' });
 
-  const item = { path: p, ext, targets, format: targets[0], li, chips: [], status, bar: bar.firstChild, supported: targets.length > 0, num };
+  const item = { path: p, ext, targets, format: targets.includes(lastFormats[ext]) ? lastFormats[ext] : targets[0], li, chips: [], status, bar: bar.firstChild, supported: targets.length > 0, num };
 
   if (targets.length) {
     fmt.append(el('span', { className: 'from', textContent: ext }), el('span', { className: 'to', textContent: '→' }));
@@ -98,8 +112,9 @@ async function addFile(p) {
 const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'ico', 'avif', 'heic', 'heif'];
 const VIDEO_EXT = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'flv', 'wmv', 'm4v', 'mpg', '3gp'];
 
-function setFormat(item, t) {
+function setFormat(item, t, keep = true) {
   item.format = t;
+  if (keep) { lastFormats[item.ext] = t; remember(FMT_KEY, lastFormats); }
   if (item.merge) { item.merge = false; item.status.textContent = item.readyText; } // picking a format by hand leaves the merge group
   item.chips.forEach((c) => c.classList.toggle('on', c.textContent === t));
 }
@@ -218,14 +233,14 @@ function renderBulk() {
   if (!videos.length && !common.length && imgs.length < 2) { bulk.hidden = true; return; }
   const add = (label, onclick, cls = 'chip') => bulk.append(el('button', { className: cls, textContent: label, onclick }));
   if (imgs.length > 1) {
-    add(`${imgs.length} images → one PDF`, () => imgs.forEach((i) => { setFormat(i, 'pdf'); i.merge = true; i.status.textContent = 'Will be merged into one PDF'; }), 'chip shortcut');
+    add(`${imgs.length} images → one PDF`, () => imgs.forEach((i) => { setFormat(i, 'pdf', false); i.merge = true; i.status.textContent = 'Will be merged into one PDF'; }), 'chip shortcut');
   }
   if (videos.length) {
-    add(`${videos.length > 1 ? 'All videos' : 'Video'} → MP3`, () => videos.forEach((i) => setFormat(i, 'mp3')), 'chip shortcut');
+    add(`${videos.length > 1 ? 'All videos' : 'Video'} → MP3`, () => videos.forEach((i) => setFormat(i, 'mp3', false)), 'chip shortcut');
   }
   if (common.length) {
     bulk.append(el('span', { className: 'blabel', textContent: 'Set all to' }));
-    common.forEach((t) => add(t, () => ok.forEach((i) => setFormat(i, t))));
+    common.forEach((t) => add(t, () => ok.forEach((i) => setFormat(i, t, false))));
   }
   bulk.hidden = running;
 }
@@ -370,8 +385,13 @@ $('outBtn').onclick = async () => {
   if (!dir) return;
   outDir = dir;
   setOut(dir);
+  remember(OUT_KEY, dir);
 };
-$('outReset').onclick = () => { outDir = defaultDir; setOut(defaultDir); };
+$('outReset').onclick = () => {
+  outDir = defaultDir;
+  setOut(defaultDir);
+  try { localStorage.removeItem(OUT_KEY); } catch { /* ignore */ }
+};
 
 for (const ev of ['dragenter', 'dragover']) {
   document.addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.add('over'); });

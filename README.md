@@ -15,6 +15,8 @@ A free, open source Windows desktop app that converts audio, video, image and do
 - Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.
 - **Images to one PDF:** queue two or more pictures (any mix of PNG, JPG, HEIC, RAW, TIFF and so on) and click **N images → one PDF**. Each picture gets its own page, portrait or landscape to suit it.
+- **Right-click in Explorer:** the installer adds **Convert with Moralify** to the context menu of files (every type the app supports) and folders. On Windows 11 it is under *Show more options*. It opens the file or folder in the running Moralify window.
+- Remembers your output folder and the last format you picked for each file type.
 - A **Stop** button cancels a running conversion (and any half-written file is removed).
 - Converted files are saved to `Documents\Moralify` by default. Use **Open** to view the folder and **Change** to pick another one.
 - Never overwrites: if a file exists, the new one is saved as `name (1).ext`.
@@ -79,6 +81,8 @@ npm start        # run the app
 npm run dist     # build the Windows installer into dist/
 ```
 
+**Publishing a release:** push a version tag (for example `git tag v1.1.0 && git push origin v1.1.0`). The GitHub Actions workflow in `.github/workflows/release.yml` builds the installer and attaches it to a release for that tag.
+
 ## Project layout
 
 ```
@@ -87,6 +91,7 @@ src/
   preload.js       Safe bridge between UI and main process
   converters.js    Conversion logic (ffmpeg, mammoth, marked, LibreOffice)
   raw.js           Finds the embedded JPEG preview inside camera RAW files
+  pdfrender/       Hidden window that renders PDF pages with pdf.js
   renderer/        UI (index.html, style.css, renderer.js)
 build/
   icon.ico         App and installer icon

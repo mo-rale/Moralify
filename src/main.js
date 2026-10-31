@@ -7,6 +7,19 @@ const { isRaw } = require('./raw');
 let win;
 const jobs = new Map();
 
+// One window only: "Convert with Moralify" in Explorer starts the app with the file or folder as an argument,
+// and a second launch hands its arguments to the window that is already open.
+const pathsFromArgs = (argv) => argv.slice(app.isPackaged ? 1 : 2).filter((a) => !a.startsWith('-') && path.resolve(a) !== path.resolve(app.getAppPath()) && fs.existsSync(a));
+const sendPaths = (paths) => { if (paths.length && win && !win.isDestroyed()) win.webContents.send('open-paths', paths); };
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', (_e, argv) => {
+    if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
+    sendPaths(pathsFromArgs(argv));
+  });
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1100,
@@ -25,6 +38,7 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.webContents.once('did-finish-load', () => sendPaths(pathsFromArgs(process.argv)));
 }
 
 ipcMain.handle('pick-files', async () => {
