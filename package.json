@@ -15,7 +15,11 @@
     "files": [
       "src/**/*",
       "build/icon.png",
-      "package.json"
+      "package.json",
+      "!node_modules/pdfjs-dist/{web,legacy,types}/**",
+      "!node_modules/pdfjs-dist/build/*.min.mjs",
+      "!node_modules/pdfjs-dist/build/pdf.sandbox.mjs",
+      "!node_modules/**/*.map"
     ],
     "asarUnpack": [
       "node_modules/ffmpeg-static/**"
@@ -44,7 +48,8 @@
     "ffmpeg-static": "^5.3.0",
     "heic-decode": "^2.1.0",
     "mammoth": "^1.13.0",
-    "marked": "^18.1.1"
+    "marked": "^18.1.1",
+    "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
     "electron": "^45.0.0",

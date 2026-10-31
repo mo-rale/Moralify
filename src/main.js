@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { convert, targetsFor, findSoffice } = require('./converters');
+const { convert, targetsFor, findSoffice, mergeImagesToPdf } = require('./converters');
 const { isRaw } = require('./raw');
 
 let win;
@@ -54,12 +54,16 @@ ipcMain.handle('open-folder', async (_e, dir) => {
 ipcMain.handle('reveal', (_e, p) => shell.showItemInFolder(p));
 
 /** A name that never overwrites an existing file or one already promised to another file in this run. */
-function uniqueOutput(dir, base, format, reserved) {
+function uniqueOutput(dir, base, format, reserved, asFolder = false) {
+  // `asFolder`: the result is a folder named like the output file without its extension (PDF -> pictures)
+  const taken = (p) => fs.existsSync(p) || reserved.has(p.toLowerCase()) || (asFolder && fs.existsSync(p.slice(0, -(format.length + 1))));
   let output = path.join(dir, `${base}.${format}`);
-  for (let n = 1; fs.existsSync(output) || reserved.has(output.toLowerCase()); n++) output = path.join(dir, `${base} (${n}).${format}`);
+  for (let n = 1; taken(output); n++) output = path.join(dir, `${base} (${n}).${format}`);
   reserved.add(output.toLowerCase());
   return output;
 }
+const PDF_PICTURE = ['png', 'jpg', 'webp'];
+const makesFolder = (input, format) => path.extname(input).toLowerCase() === '.pdf' && PDF_PICTURE.includes(format);
 
 // ---- folders ----
 const MAX_FILES = 20000;
@@ -113,15 +117,15 @@ ipcMain.handle('convert', async (e, { id, input, format, outDir, opts }) => {
   const dir = outDir || defaultOut();
   const base = path.basename(input, path.extname(input));
   // Never overwrite the source or an existing file.
-  const output = uniqueOutput(dir, base, format, new Set());
+  const output = uniqueOutput(dir, base, format, new Set(), makesFolder(input, format));
   const signal = { cancelled: false };
   jobs.set(id, signal);
   try {
-    await convert({
+    const r = await convert({
       input, output, signal, opts,
       onProgress: (p) => e.sender.send('progress', { id, progress: p }),
     });
-    return { ok: true, output };
+    return { ok: true, output: (r && r.output) || output, note: r && r.note };
   } catch (err) {
     fs.rmSync(output, { force: true }); // never leave a half-written file behind
     return { ok: false, error: err.message };
@@ -155,7 +159,7 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName,
       try {
         const sub = path.dirname(f.rel.split('/').join(path.sep));
         const dir = sub === '.' ? root : path.join(root, sub);
-        output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved);
+        output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved, makesFolder(f.path, format));
         await convert({ input: f.path, output, signal, opts, onProgress: () => {} });
         done++;
       } catch (err) {
@@ -172,6 +176,19 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName,
     return { ok: true, done, failed, cancelled: job.cancelled, outDir: root };
   } finally {
     jobs.delete(id);
+  }
+});
+
+ipcMain.handle('merge-pdf', async (_e, { files, outDir, name, opts }) => {
+  const dir = outDir || defaultOut();
+  fs.mkdirSync(dir, { recursive: true });
+  const output = uniqueOutput(dir, String(name || 'Merged images').replace(/[<>:"/\\|?*]/g, '_'), 'pdf', new Set());
+  try {
+    const r = await mergeImagesToPdf(files, output, opts || {});
+    return { ok: true, output: r.output, note: r.note };
+  } catch (err) {
+    fs.rmSync(output, { force: true });
+    return { ok: false, error: err.message };
   }
 });
 

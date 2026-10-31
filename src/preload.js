@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   pickFolders: () => ipcRenderer.invoke('pick-folders'),
   inspectPaths: (paths) => ipcRenderer.invoke('inspect-paths', paths),
+  mergePdf: (job) => ipcRenderer.invoke('merge-pdf', job),
   convertBatch: (job) => ipcRenderer.invoke('convert-batch', job),
   onBatchProgress: (cb) => ipcRenderer.on('batch-progress', (_e, d) => cb(d)),
   targets: (p) => ipcRenderer.invoke('targets', p),

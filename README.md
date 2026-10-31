@@ -14,6 +14,7 @@ A free, open source Windows desktop app that converts audio, video, image and do
 - Pick the output format for each file by clicking a format button (`MP3 → WAV OGG FLAC ...`).
 - Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.
+- **Images to one PDF:** queue two or more pictures (any mix of PNG, JPG, HEIC, RAW, TIFF and so on) and click **N images → one PDF**. Each picture gets its own page, portrait or landscape to suit it.
 - A **Stop** button cancels a running conversion (and any half-written file is removed).
 - Converted files are saved to `Documents\Moralify` by default. Use **Open** to view the folder and **Change** to pick another one.
 - Never overwrites: if a file exists, the new one is saved as `name (1).ext`.
@@ -38,6 +39,7 @@ Moralify follows your Windows light or dark theme:
 | Video: mp4, mkv, webm, avi, mov | other video formats, GIF, or audio only |
 | Images: png, jpg, webp, bmp, gif, tiff | other image formats, PDF |
 | iPhone photos: heic, heif | png, jpg, webp, bmp, gif, tiff, PDF |
+| pdf | png, jpg, webp: one picture per page, saved in a folder named like the PDF |
 | Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (see the note below) |
 | docx | pdf, html, txt |
 | md | pdf, html, txt |
@@ -49,7 +51,7 @@ doc, xls, xlsx, ppt, pptx, odt, ods, odp and rtf can be converted to PDF and oth
 
 **About camera RAW:** Moralify converts the full-size JPEG preview that the camera stores inside every RAW file. It looks like the camera's own JPEG, but it is not a "developed" copy of the sensor data, and its resolution can be lower than the full photo. Developing the true RAW data would need a RAW engine such as LibRaw.
 
-**Not supported yet:** PDF to other formats, and full-quality RAW development.
+**Not supported yet:** PDF to Word/text, and full-quality RAW development.
 
 ## Install
 

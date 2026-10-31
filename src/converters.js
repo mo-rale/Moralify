@@ -5,6 +5,7 @@ const path = require('path');
 
 const { isRaw, extractPreviews } = require('./raw');
 
+const PDF_PAGE_FORMATS = ['png', 'jpg', 'webp'];
 const HEIC_EXT = ['heic', 'heif']; // iPhone / modern camera photos: decoded here because FFmpeg cannot read them
 const isHeic = (ext) => HEIC_EXT.includes(ext);
 
@@ -41,7 +42,7 @@ function targetsFor(inputExt) {
   if (IMAGE.includes(ext) || ['ico', 'avif'].includes(ext)) return [...without(IMAGE), 'pdf'];
   if (isHeic(ext)) return [...IMAGE, 'pdf'];
   if (isRaw(ext)) return [...IMAGE, 'pdf']; // camera RAW: converts the embedded JPEG preview
-  if (ext === 'pdf') return soffice ? ['png'] : [];
+  if (ext === 'pdf') return PDF_PAGE_FORMATS; // every page becomes a picture
   if (ext === 'docx') return soffice ? ['pdf', 'html', 'txt', 'odt', 'rtf'] : ['pdf', 'html', 'txt'];
   if (ext === 'md') return ['pdf', 'html', 'txt'];
   if (ext === 'html') return ['pdf', 'txt'];
@@ -203,6 +204,19 @@ function runSoffice(input, outExt, output) {
   });
 }
 
+/** PDF -> one picture per page, written into a folder named like the PDF (the output path minus its extension). */
+async function convertPdfToImages(input, output, outExt, onProgress, signal, opts = {}) {
+  const { renderPdf } = require('./pdfrender');
+  const folder = output.slice(0, -(outExt.length + 1));
+  try {
+    const pages = await renderPdf({ input, folder, ext: outExt, quality: opts.quality, maxSize: opts.maxSize, onProgress, signal });
+    return { output: folder, note: `${pages} page${pages === 1 ? '' : 's'}` };
+  } catch (e) {
+    fs.rmSync(folder, { recursive: true, force: true }); // never leave a half-rendered folder behind
+    throw e;
+  }
+}
+
 /** HEIC/HEIF -> picture: decode with libheif (WebAssembly), then hand the pixels to FFmpeg for the output format. */
 async function convertHeic(input, output, outExt, onProgress, signal, opts = {}) {
   const decode = require('heic-decode');
@@ -250,6 +264,12 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   const outExt = path.extname(output).slice(1).toLowerCase();
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
+  if (inExt === 'pdf' && PDF_PAGE_FORMATS.includes(outExt)) {
+    const r = await convertPdfToImages(input, output, outExt, onProgress, signal, opts);
+    onProgress(1);
+    return r;
+  }
+
   if (isHeic(inExt)) {
     await convertHeic(input, output, outExt, onProgress, signal, opts);
     onProgress(1);
@@ -271,8 +291,8 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   } else if (isMedia) {
     const isVideo = !AUDIO.includes(inExt) && !IMAGE.includes(inExt);
     await runFfmpeg(ffmpegArgsFor(input, output, outExt, isVideo, opts), onProgress, signal);
-  } else if (inExt === 'pdf' && outExt === 'png') {
-    throw new Error('PDF to image is not supported yet.');
+  } else if (inExt === 'pdf') {
+    throw new Error(`Unsupported conversion: pdf to ${outExt}`);
   } else if (OFFICE.includes(inExt) && !(inExt === 'docx' && ['html', 'txt'].includes(outExt)) &&
     !(inExt === 'docx' && outExt === 'pdf' && !findSoffice())) {
     // docx -> pdf prefers LibreOffice: it keeps headers, images and fonts, unlike the HTML fallback.
@@ -290,4 +310,43 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   onProgress(1);
 }
 
-module.exports = { convert, targetsFor, findSoffice };
+const BROWSER_IMG = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'avif', 'ico']; // pictures Chromium can place in a PDF as they are
+
+/** Several pictures -> one PDF, one picture per page (portrait or landscape A4, whichever fits the picture). */
+async function mergeImagesToPdf(files, output, opts = {}, signal) {
+  const { BrowserWindow } = require('electron');
+  const temps = [];
+  const html = path.join(os.tmpdir(), `fc-merge-${Date.now()}-${Math.random().toString(36).slice(2)}.html`);
+  let win;
+  try {
+    const pages = [];
+    for (const f of files) {
+      const ext = path.extname(f).slice(1).toLowerCase();
+      let src = f;
+      if (opts.custom || !BROWSER_IMG.includes(ext)) { // RAW, HEIC, TIFF ... or the user asked for smaller pictures: convert first
+        src = path.join(os.tmpdir(), `fc-merge-${Date.now()}-${Math.random().toString(36).slice(2)}.${opts.custom ? 'jpg' : 'png'}`);
+        temps.push(src);
+        await convert({ input: f, output: src, onProgress() {}, signal: signal || {}, opts });
+      }
+      pages.push(`<div class="p"><img src="${fileUrl(src)}"></div>`);
+    }
+    fs.writeFileSync(html, `<!doctype html><meta charset="utf-8"><style>
+@page port{size:A4 portrait;margin:0}@page land{size:A4 landscape;margin:0}
+html,body{margin:0}.port{page:port;width:210mm;height:297mm}.land{page:land;width:297mm;height:210mm}
+.p{box-sizing:border-box;padding:6mm;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.p:not(:last-child){break-after:page}.p img{max-width:100%;max-height:100%;object-fit:contain}
+</style>${pages.join('')}`);
+    win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+    await win.loadFile(html);
+    await win.webContents.executeJavaScript(
+      "document.querySelectorAll('.p').forEach(p => { const i = p.querySelector('img'); p.classList.add(i.naturalWidth > i.naturalHeight ? 'land' : 'port'); })");
+    fs.writeFileSync(output, await win.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true }));
+    return { output, note: `${files.length} pages` };
+  } finally {
+    if (win) win.destroy();
+    fs.rmSync(html, { force: true });
+    temps.forEach((t) => fs.rmSync(t, { force: true }));
+  }
+}
+
+module.exports = { convert, targetsFor, findSoffice, mergeImagesToPdf };

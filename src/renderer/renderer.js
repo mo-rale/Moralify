@@ -81,7 +81,9 @@ async function addFile(p) {
       item.chips.push(chip);
       fmt.append(chip);
     }
-    status.textContent = (await api.isRaw(p)) ? 'Ready · converts the photo’s built-in preview, not the full RAW data' : 'Ready';
+    item.raw = await api.isRaw(p);
+    item.readyText = item.raw ? 'Ready · converts the photo’s built-in preview, not the full RAW data' : 'Ready';
+    status.textContent = item.readyText;
   } else {
     status.textContent = `Can't convert .${ext} files`;
     status.classList.add('err');
@@ -93,10 +95,12 @@ async function addFile(p) {
   items.set(id, item);
 }
 
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'ico', 'avif', 'heic', 'heif'];
 const VIDEO_EXT = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'flv', 'wmv', 'm4v', 'mpg', '3gp'];
 
 function setFormat(item, t) {
   item.format = t;
+  if (item.merge) { item.merge = false; item.status.textContent = item.readyText; } // picking a format by hand leaves the merge group
   item.chips.forEach((c) => c.classList.toggle('on', c.textContent === t));
 }
 
@@ -208,10 +212,14 @@ function renderBulk() {
   const bulk = $('bulk');
   bulk.replaceChildren();
   const ok = [...items.values()].filter((i) => !i.group && i.supported);
+  const imgs = ok.filter((i) => IMG_EXT.includes(i.ext) || i.raw);
   const videos = ok.filter((i) => VIDEO_EXT.includes(i.ext) && i.targets.includes('mp3'));
   const common = ok.length > 1 ? ok[0].targets.filter((t) => ok.every((i) => i.targets.includes(t))) : [];
-  if (!videos.length && !common.length) { bulk.hidden = true; return; }
+  if (!videos.length && !common.length && imgs.length < 2) { bulk.hidden = true; return; }
   const add = (label, onclick, cls = 'chip') => bulk.append(el('button', { className: cls, textContent: label, onclick }));
+  if (imgs.length > 1) {
+    add(`${imgs.length} images → one PDF`, () => imgs.forEach((i) => { setFormat(i, 'pdf'); i.merge = true; i.status.textContent = 'Will be merged into one PDF'; }), 'chip shortcut');
+  }
   if (videos.length) {
     add(`${videos.length > 1 ? 'All videos' : 'Video'} → MP3`, () => videos.forEach((i) => setFormat(i, 'mp3')), 'chip shortcut');
   }
@@ -271,6 +279,30 @@ async function runFolder(id, g) {
   g.status.append(el('button', { className: 'link', textContent: 'Open folder', onclick: () => api.openFolder(res.outDir) }));
 }
 
+async function runMerge(set) {
+  set.forEach((i) => {
+    i.chips.forEach((c) => (c.disabled = true));
+    i.li.classList.remove('done');
+    i.status.className = 'status';
+    i.status.textContent = 'Merging…';
+    i.bar.style.width = '0';
+  });
+  const res = await api.mergePdf({ files: set.map((i) => i.path), outDir, name: 'Merged images', opts: picOpts() });
+  set.forEach((i) => {
+    i.chips.forEach((c) => (c.disabled = false));
+    if (res.ok) {
+      i.bar.style.width = '100%';
+      i.li.classList.add('done');
+      i.status.className = 'status ok';
+      i.status.textContent = `Merged into ${baseName(res.output)}`;
+      i.status.append(el('button', { className: 'link', textContent: 'Show', onclick: () => api.reveal(res.output) }));
+    } else {
+      i.status.className = 'status err';
+      i.status.textContent = res.error;
+    }
+  });
+}
+
 $('stop').onclick = () => {
   stopRequested = true;
   $('stop').disabled = true;
@@ -284,8 +316,11 @@ $('go').onclick = async () => {
   $('stop').disabled = false;
   $('stop').textContent = 'Stop';
   refresh();
+  const mergeSet = [...items.values()].filter((i) => !i.group && i.supported && i.merge && i.format === 'pdf');
+  const doMerge = mergeSet.length > 1;
   for (const [id, it] of items) {
     if (stopRequested) break;
+    if (doMerge && mergeSet.includes(it)) continue;
     if (it.group) { await runFolder(id, it); continue; }
     if (!it.supported) continue;
     it.chips.forEach((c) => (c.disabled = true));
@@ -299,7 +334,7 @@ $('go').onclick = async () => {
       it.bar.style.width = '100%';
       it.li.classList.add('done');
       it.status.className = 'status ok';
-      it.status.textContent = `Saved ${baseName(res.output)}`;
+      it.status.textContent = `Saved ${baseName(res.output)}` + (res.note ? ` · ${res.note}` : '');
       it.status.append(el('button', { className: 'link', textContent: 'Show', onclick: () => api.reveal(res.output) }));
     } else {
       it.bar.style.width = '0';
@@ -307,6 +342,7 @@ $('go').onclick = async () => {
       it.status.textContent = res.error === 'Cancelled' ? 'Stopped' : res.error;
     }
   }
+  if (doMerge && !stopRequested) await runMerge(mergeSet);
   running = false;
   refresh();
 };
