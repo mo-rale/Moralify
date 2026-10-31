@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   onBatchProgress: (cb) => ipcRenderer.on('batch-progress', (_e, d) => cb(d)),
   targets: (p) => ipcRenderer.invoke('targets', p),
   isRaw: (p) => ipcRenderer.invoke('is-raw', p),
+  hasLibraw: () => ipcRenderer.invoke('has-libraw'),
   hasLibreOffice: () => ipcRenderer.invoke('has-libreoffice'),
   convert: (job) => ipcRenderer.invoke('convert', job),
   cancel: (id) => ipcRenderer.send('cancel', id),

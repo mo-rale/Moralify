@@ -42,7 +42,7 @@ Moralify follows your Windows light or dark theme:
 | Images: png, jpg, webp, bmp, gif, tiff | other image formats, PDF |
 | iPhone photos: heic, heif | png, jpg, webp, bmp, gif, tiff, PDF |
 | pdf | png, jpg, webp: one picture per page, saved in a folder named like the PDF |
-| Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (see the note below) |
+| Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (developed with LibRaw, see the note below) |
 | docx | pdf, html, txt |
 | md | pdf, html, txt |
 | html | pdf, txt |
@@ -51,9 +51,9 @@ Moralify follows your Windows light or dark theme:
 **With [LibreOffice](https://www.libreoffice.org/) installed** (detected automatically):
 doc, xls, xlsx, ppt, pptx, odt, ods, odp and rtf can be converted to PDF and other document formats, and docx can also become odt or rtf.
 
-**About camera RAW:** Moralify converts the full-size JPEG preview that the camera stores inside every RAW file. It looks like the camera's own JPEG, but it is not a "developed" copy of the sensor data, and its resolution can be lower than the full photo. Developing the true RAW data would need a RAW engine such as LibRaw.
+**About camera RAW:** by default Moralify *develops* the real sensor data with [LibRaw](https://www.libraw.org/) (camera white balance, sRGB colours, highlight blending), so you get a proper full-resolution picture; PNG and TIFF keep 16-bit depth. Develop is slower than the alternative, which is **Camera preview** (Picture options → RAW photos): it converts the full-size JPEG the camera stores inside every RAW file, which is instant but can be lower resolution. If a file cannot be developed, Moralify falls back to its preview and says so in the status line.
 
-**Not supported yet:** PDF to Word/text, and full-quality RAW development.
+**Not supported yet:** PDF to Word/text.
 
 ## Install
 
@@ -77,7 +77,7 @@ Requires Node.js.
 
 ```bash
 npm install
-npm start        # run the app
+npm start        # run the app (the first start also downloads the LibRaw build, about 3.5 MB, into vendor/)
 npm run dist     # build the Windows installer into dist/
 ```
 
@@ -90,7 +90,7 @@ src/
   main.js          Electron main process: window, dialogs, IPC
   preload.js       Safe bridge between UI and main process
   converters.js    Conversion logic (ffmpeg, mammoth, marked, LibreOffice)
-  raw.js           Finds the embedded JPEG preview inside camera RAW files
+  raw.js           Finds the embedded JPEG preview inside camera RAW files (the fast RAW mode)
   pdfrender/       Hidden window that renders PDF pages with pdf.js
   renderer/        UI (index.html, style.css, renderer.js)
 build/
@@ -104,7 +104,7 @@ build/
 
 Moralify is built with Electron, [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static) (audio, video, images), [mammoth](https://github.com/mwilliamson/mammoth.js) (docx) and [marked](https://github.com/markedjs/marked) (Markdown). PDFs for documents are rendered with Electron's built-in printing.
 
-The bundled FFmpeg binary is distributed under the GNU GPL; see <https://ffmpeg.org/legal.html>. LibreOffice, if used, is a separate program with its own license.
+The bundled FFmpeg binary is distributed under the GNU GPL; see <https://ffmpeg.org/legal.html>. RAW development uses the LibRaw command-line tool, a separate program under LGPL 2.1 / CDDL 1.0 (licenses are installed next to it in `resources\libraw`; source at <https://www.libraw.org/>). HEIC decoding uses libheif (LGPL 3.0) through the `heic-decode` package, and PDF pages are rendered with [pdf.js](https://mozilla.github.io/pdf.js/) (Apache 2.0). LibreOffice, if used, is a separate program with its own license.
 
 The demo video's music is "Happy Beats / Business Moves vol. 9" by Sascha Ende ([ende.app](https://ende.app)), licensed CC BY 4.0.
 

@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { convert, targetsFor, findSoffice, mergeImagesToPdf } = require('./converters');
+const { convert, targetsFor, findSoffice, findLibraw, mergeImagesToPdf } = require('./converters');
 const { isRaw } = require('./raw');
 
 let win;
@@ -59,6 +59,7 @@ ipcMain.handle('pick-folder', async () => {
 ipcMain.handle('targets', (_e, filePath) => targetsFor(path.extname(filePath).slice(1)));
 ipcMain.handle('is-raw', (_e, filePath) => isRaw(path.extname(filePath).slice(1)));
 ipcMain.handle('has-libreoffice', () => !!findSoffice());
+ipcMain.handle('has-libraw', () => !!findLibraw());
 const defaultOut = () => path.join(app.getPath('documents'), 'Moralify');
 ipcMain.handle('default-out', () => defaultOut());
 ipcMain.handle('open-folder', async (_e, dir) => {

@@ -20,6 +20,8 @@ Conversion can change or lose quality, formatting or metadata. Keep backups of i
 4. THIRD-PARTY SOFTWARE
 Moralify includes third-party components, each under its own license:
 - FFmpeg (audio, video and image conversion), bundled via ffmpeg-static. The FFmpeg binary is distributed under the GNU General Public License. See https://ffmpeg.org/legal.html
+- LibRaw (RAW photo development), a separate program under the LGPL 2.1 / CDDL 1.0. The licenses are installed beside it. Source: https://www.libraw.org
+- libheif via heic-decode (HEIC photos), LGPL 3.0; pdf.js (PDF pages), Apache 2.0.
 - Electron (MIT), mammoth (BSD-2-Clause), marked (MIT).
 If LibreOffice is installed on your computer, Moralify can use it for Office document conversions. LibreOffice is a separate program with its own license and is not part of Moralify.
 

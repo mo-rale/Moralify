@@ -3,3 +3,4 @@ dist/
 *.log
 .claude/
 brag-output/
+vendor/

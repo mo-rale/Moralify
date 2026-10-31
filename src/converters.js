@@ -236,8 +236,64 @@ async function convertHeic(input, output, outExt, onProgress, signal, opts = {})
   await runFfmpeg(ffmpegArgsFor(rawIn, output, outExt, false, opts), onProgress, signal, rgba);
 }
 
-/** Camera RAW -> picture, by converting the largest JPEG preview stored inside the RAW file. */
+/** Where the LibRaw command-line tool lives: beside the installed app, or in vendor/ while developing. */
+function findLibraw() {
+  const exe = 'dcraw_emu.exe';
+  const candidates = [process.resourcesPath && path.join(process.resourcesPath, 'libraw', exe), path.join(__dirname, '..', 'vendor', 'libraw', exe)].filter(Boolean);
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+/** Develop a RAW file into a 16-bit TIFF with LibRaw: camera white balance, blended highlights, sRGB colours. */
+function developRaw(input, outTiff, signal) {
+  const exe = findLibraw();
+  return new Promise((resolve, reject) => {
+    const child = spawn(exe, ['-w', '-H', '2', '-6', '-T', '-Z', outTiff, input], { windowsHide: true, cwd: path.dirname(exe) });
+    let err = '';
+    child.stderr.on('data', (d) => { err = (err + d).slice(-500); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0 && fs.existsSync(outTiff)) return resolve();
+      if (signal && signal.cancelled) return reject(new Error('Cancelled'));
+      const last = err.trim().split(/\r?\n/).pop();
+      reject(new Error(`LibRaw could not develop this file${last ? `: ${last}` : ''}`));
+    });
+    if (signal) signal.kill = () => child.kill();
+  });
+}
+
+/** Camera RAW -> picture. Develops the real sensor data with LibRaw when it is available; otherwise (or if that fails) uses the JPEG preview inside the file. */
 async function convertRaw(input, output, outExt, onProgress, signal, opts = {}) {
+  if (opts.rawMode !== 'preview' && findLibraw()) {
+    const tiff = path.join(os.tmpdir(), `fc-dev-${Date.now()}-${Math.random().toString(36).slice(2)}.tiff`);
+    try {
+      await developRaw(input, tiff, signal);
+      if (outExt === 'pdf') {
+        const png = tiff.replace('.tiff', '.png');
+        try {
+          await runFfmpeg(ffmpegArgsFor(tiff, png, 'png', false, opts), () => {}, signal);
+          await htmlToPdf(wrapHtml(`<img src="${fileUrl(png)}" style="max-width:100%;max-height:260mm">`), output);
+        } finally {
+          fs.rmSync(png, { force: true });
+        }
+      } else {
+        await runFfmpeg(ffmpegArgsFor(tiff, output, outExt, false, opts), onProgress, signal);
+      }
+      return { note: 'developed from the full RAW data' };
+    } catch (e) {
+      if (signal && signal.cancelled) throw e;
+      fs.rmSync(output, { force: true });
+      await convertRawPreview(input, output, outExt, onProgress, signal, opts); // throws if there is no usable preview either
+      return { note: 'used the camera preview: this file could not be developed' };
+    } finally {
+      fs.rmSync(tiff, { force: true });
+    }
+  }
+  await convertRawPreview(input, output, outExt, onProgress, signal, opts);
+  return { note: 'from the camera preview' };
+}
+
+/** Camera RAW -> picture, by converting the largest JPEG preview stored inside the RAW file. */
+async function convertRawPreview(input, output, outExt, onProgress, signal, opts = {}) {
   const previews = extractPreviews(input);
   if (!previews.length) throw new Error('No preview image found inside this RAW file.');
   let lastError;
@@ -277,9 +333,9 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   }
 
   if (isRaw(inExt)) {
-    await convertRaw(input, output, outExt, onProgress, signal, opts);
+    const r = await convertRaw(input, output, outExt, onProgress, signal, opts);
     onProgress(1);
-    return;
+    return r;
   }
 
   const isMedia = AUDIO.includes(inExt) || VIDEO.includes(inExt) || IMAGE.includes(inExt) ||
@@ -349,4 +405,4 @@ html,body{margin:0}.port{page:port;width:210mm;height:297mm}.land{page:land;widt
   }
 }
 
-module.exports = { convert, targetsFor, findSoffice, mergeImagesToPdf };
+module.exports = { convert, targetsFor, findSoffice, findLibraw, mergeImagesToPdf };
