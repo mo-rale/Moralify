@@ -3,6 +3,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { isRaw, extractPreviews } = require('./raw');
+
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
 
 const AUDIO = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus', 'wma'];
@@ -34,6 +36,7 @@ function targetsFor(inputExt) {
     return [...without(VIDEO), 'gif', ...AUDIO];
   }
   if (IMAGE.includes(ext) || ['ico', 'avif', 'heic'].includes(ext)) return [...without(IMAGE), 'pdf'];
+  if (isRaw(ext)) return [...IMAGE, 'pdf']; // camera RAW: converts the embedded JPEG preview
   if (ext === 'pdf') return soffice ? ['png'] : [];
   if (ext === 'docx') return soffice ? ['pdf', 'html', 'txt', 'odt', 'rtf'] : ['pdf', 'html', 'txt'];
   if (ext === 'md') return ['pdf', 'html', 'txt'];
@@ -169,10 +172,39 @@ function runSoffice(input, outExt, output) {
   });
 }
 
+/** Camera RAW -> picture, by converting the largest JPEG preview stored inside the RAW file. */
+async function convertRaw(input, output, outExt, onProgress, signal) {
+  const previews = extractPreviews(input);
+  if (!previews.length) throw new Error('No preview image found inside this RAW file.');
+  let lastError;
+  for (const pv of previews.slice(0, 3)) { // fall back to the next one if a candidate will not decode
+    const tmp = path.join(os.tmpdir(), `fc-raw-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
+    fs.writeFileSync(tmp, pv.bytes);
+    try {
+      if (outExt === 'jpg') fs.copyFileSync(tmp, output); // already a JPEG: no re-compression
+      else if (outExt === 'pdf') await htmlToPdf(wrapHtml(`<img src="${encodeURI('file:///' + tmp.replace(/\\/g, '/'))}" style="max-width:100%;max-height:260mm">`), output);
+      else await runFfmpeg(ffmpegArgsFor(tmp, output, outExt, false), onProgress, signal);
+      return;
+    } catch (e) {
+      lastError = e;
+      if (signal && signal.cancelled) throw e;
+    } finally {
+      fs.rmSync(tmp, { force: true });
+    }
+  }
+  throw lastError;
+}
+
 async function convert({ input, output, onProgress, signal }) {
   const inExt = norm(path.extname(input).slice(1).toLowerCase());
   const outExt = path.extname(output).slice(1).toLowerCase();
   fs.mkdirSync(path.dirname(output), { recursive: true });
+
+  if (isRaw(inExt)) {
+    await convertRaw(input, output, outExt, onProgress, signal);
+    onProgress(1);
+    return;
+  }
 
   const isMedia = AUDIO.includes(inExt) || VIDEO.includes(inExt) || IMAGE.includes(inExt) ||
     ['ico', 'avif', 'heic', 'flv', 'wmv', 'm4v', 'mpg', '3gp', 'amr', 'aiff', 'ac3'].includes(inExt);
@@ -185,7 +217,9 @@ async function convert({ input, output, onProgress, signal }) {
     await runFfmpeg(ffmpegArgsFor(input, output, outExt, isVideo), onProgress, signal);
   } else if (inExt === 'pdf' && outExt === 'png') {
     throw new Error('PDF to image is not supported yet.');
-  } else if (OFFICE.includes(inExt) && !(inExt === 'docx' && ['pdf', 'html', 'txt'].includes(outExt))) {
+  } else if (OFFICE.includes(inExt) && !(inExt === 'docx' && ['html', 'txt'].includes(outExt)) &&
+    !(inExt === 'docx' && outExt === 'pdf' && !findSoffice())) {
+    // docx -> pdf prefers LibreOffice: it keeps headers, images and fonts, unlike the HTML fallback.
     if (!findSoffice()) throw new Error('This conversion needs LibreOffice installed.');
     await runSoffice(input, outExt, output);
   } else if (TEXTDOC.includes(inExt) || inExt === 'docx') {

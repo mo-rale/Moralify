@@ -9,6 +9,7 @@ A free, open source Windows desktop app that converts audio, video, image and do
 ## Features
 
 - Drag and drop files, or click to browse. Convert many files at once.
+- **Batch convert a whole folder:** drop a folder on the window, or click **Add folder**. Pick the file types to include (for example only PNG), pick the output format (for example JPG), and Moralify converts everything in it, subfolders too. Results go to `Documents\Moralify\<folder name>` with the same subfolder layout, and files that are already in the target format are skipped.
 - Pick the output format for each file by clicking a format button (`MP3 → WAV OGG FLAC ...`).
 - Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.
@@ -34,6 +35,7 @@ Moralify follows your Windows light or dark theme:
 | Audio: mp3, wav, ogg, flac, aac, m4a, opus, wma | the other audio formats |
 | Video: mp4, mkv, webm, avi, mov | other video formats, GIF, or audio only |
 | Images: png, jpg, webp, bmp, gif, tiff | other image formats, PDF |
+| Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (see the note below) |
 | docx | pdf, html, txt |
 | md | pdf, html, txt |
 | html | pdf, txt |
@@ -42,7 +44,9 @@ Moralify follows your Windows light or dark theme:
 **With [LibreOffice](https://www.libreoffice.org/) installed** (detected automatically):
 doc, xls, xlsx, ppt, pptx, odt, ods, odp and rtf can be converted to PDF and other document formats, and docx can also become odt or rtf.
 
-**Not supported yet:** PDF to other formats.
+**About camera RAW:** Moralify converts the full-size JPEG preview that the camera stores inside every RAW file. It looks like the camera's own JPEG, but it is not a "developed" copy of the sensor data, and its resolution can be lower than the full photo. Developing the true RAW data would need a RAW engine such as LibRaw.
+
+**Not supported yet:** PDF to other formats, and full-quality RAW development.
 
 ## Install
 
@@ -77,6 +81,7 @@ src/
   main.js          Electron main process: window, dialogs, IPC
   preload.js       Safe bridge between UI and main process
   converters.js    Conversion logic (ffmpeg, mammoth, marked, LibreOffice)
+  raw.js           Finds the embedded JPEG preview inside camera RAW files
   renderer/        UI (index.html, style.css, renderer.js)
 build/
   icon.ico         App and installer icon

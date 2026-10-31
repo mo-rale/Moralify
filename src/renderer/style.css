@@ -76,6 +76,16 @@ li.done .bar i { background: var(--ok); }
 .chip.shortcut { background: var(--soft); border-color: var(--accent); color: var(--accent); }
 .chip.shortcut:hover { background: var(--accent); color: var(--on-accent); }
 
+/* folders */
+.folder-btn { margin-left: auto; background: var(--soft); border: 1px solid var(--line2); color: var(--ink); padding: 8px 16px; border-radius: 10px; font-weight: 600; font-size: 13px; transition: .12s; }
+.folder-btn:hover { border-color: var(--accent); color: var(--accent); }
+.gbody { display: contents; }
+.badge svg { width: 22px; height: 22px; }
+.lab { color: var(--mute); font-size: 12.5px; margin-right: 2px; }
+.chip.inc.on { background: var(--soft); border-color: var(--accent); color: var(--ink); }
+.chip.inc.on:hover:not(:disabled) { background: var(--soft); color: var(--accent); }
+.sum { grid-column: 2 / -1; font-size: 12.5px; color: var(--mute); margin-top: 6px; }
+
 /* footer */
 footer { border-top: 1px solid var(--line); background: var(--bg); padding: 14px 0 18px; }
 .foot.col { display: flex; align-items: center; justify-content: space-between; }
