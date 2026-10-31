@@ -14,6 +14,7 @@ A free, open source Windows desktop app that converts audio, video, image and do
 - Pick the output format for each file by clicking a format button (`MP3 → WAV OGG FLAC ...`).
 - Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.
+- A **Stop** button cancels a running conversion (and any half-written file is removed).
 - Converted files are saved to `Documents\Moralify` by default. Use **Open** to view the folder and **Change** to pick another one.
 - Never overwrites: if a file exists, the new one is saved as `name (1).ext`.
 
@@ -36,6 +37,7 @@ Moralify follows your Windows light or dark theme:
 | Audio: mp3, wav, ogg, flac, aac, m4a, opus, wma | the other audio formats |
 | Video: mp4, mkv, webm, avi, mov | other video formats, GIF, or audio only |
 | Images: png, jpg, webp, bmp, gif, tiff | other image formats, PDF |
+| iPhone photos: heic, heif | png, jpg, webp, bmp, gif, tiff, PDF |
 | Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (see the note below) |
 | docx | pdf, html, txt |
 | md | pdf, html, txt |

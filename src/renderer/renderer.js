@@ -4,6 +4,7 @@ let outDir = null;
 let defaultDir = '';
 let nextId = 1;
 let running = false;
+let stopRequested = false;
 
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 const baseName = (p) => p.split(/[\\/]/).pop();
@@ -228,6 +229,8 @@ function refresh() {
   const ready = all.reduce((n, i) => n + (i.group ? groupPlan(i).todo.length : (i.supported ? 1 : 0)), 0);
   const folders = all.filter((i) => i.group).length;
   const fileCount = all.reduce((n, i) => n + (i.group ? inScope(i).length : 1), 0);
+  $('go').hidden = running;
+  $('stop').hidden = !running;
   $('go').disabled = running || !ready;
   $('goN').textContent = ready ? ` ${plural(ready, 'file')}` : '';
   $('clear').disabled = running || !all.length;
@@ -262,16 +265,27 @@ async function runFolder(id, g) {
   const nf = res.failed.length;
   g.status.className = 'status ' + (nf ? 'err' : 'ok');
   g.status.title = res.failed.map((f) => `${baseName(f.path)}: ${f.error}`).join('\n').slice(0, 2000);
-  g.status.textContent = (res.cancelled ? 'Cancelled · ' : 'Done · ') + `${plural(res.done, 'file')} converted` + (nf ? ` · ${nf} failed (hover for details)` : '');
+  g.status.textContent = (res.cancelled ? 'Stopped · ' : 'Done · ') + `${plural(res.done, 'file')} converted` + (nf ? ` · ${nf} failed (hover for details)` : '');
   if (!nf) g.li.classList.add('done');
   g.bar.firstChild.style.width = res.cancelled ? '0' : '100%';
   g.status.append(el('button', { className: 'link', textContent: 'Open folder', onclick: () => api.openFolder(res.outDir) }));
 }
 
+$('stop').onclick = () => {
+  stopRequested = true;
+  $('stop').disabled = true;
+  $('stop').textContent = 'Stopping…';
+  for (const id of items.keys()) api.cancel(id); // only jobs that are running react
+};
+
 $('go').onclick = async () => {
   running = true;
+  stopRequested = false;
+  $('stop').disabled = false;
+  $('stop').textContent = 'Stop';
   refresh();
   for (const [id, it] of items) {
+    if (stopRequested) break;
     if (it.group) { await runFolder(id, it); continue; }
     if (!it.supported) continue;
     it.chips.forEach((c) => (c.disabled = true));
@@ -290,7 +304,7 @@ $('go').onclick = async () => {
     } else {
       it.bar.style.width = '0';
       it.status.className = 'status err';
-      it.status.textContent = res.error;
+      it.status.textContent = res.error === 'Cancelled' ? 'Stopped' : res.error;
     }
   }
   running = false;

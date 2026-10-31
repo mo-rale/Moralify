@@ -5,6 +5,9 @@ const path = require('path');
 
 const { isRaw, extractPreviews } = require('./raw');
 
+const HEIC_EXT = ['heic', 'heif']; // iPhone / modern camera photos: decoded here because FFmpeg cannot read them
+const isHeic = (ext) => HEIC_EXT.includes(ext);
+
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
 
 const AUDIO = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus', 'wma'];
@@ -35,7 +38,8 @@ function targetsFor(inputExt) {
   if (VIDEO.includes(ext) || ['flv', 'wmv', 'm4v', 'mpg', '3gp'].includes(ext)) {
     return [...without(VIDEO), 'gif', ...AUDIO];
   }
-  if (IMAGE.includes(ext) || ['ico', 'avif', 'heic'].includes(ext)) return [...without(IMAGE), 'pdf'];
+  if (IMAGE.includes(ext) || ['ico', 'avif'].includes(ext)) return [...without(IMAGE), 'pdf'];
+  if (isHeic(ext)) return [...IMAGE, 'pdf'];
   if (isRaw(ext)) return [...IMAGE, 'pdf']; // camera RAW: converts the embedded JPEG preview
   if (ext === 'pdf') return soffice ? ['png'] : [];
   if (ext === 'docx') return soffice ? ['pdf', 'html', 'txt', 'odt', 'rtf'] : ['pdf', 'html', 'txt'];
@@ -46,9 +50,10 @@ function targetsFor(inputExt) {
   return [];
 }
 
-function runFfmpeg(args, onProgress, signal) {
+function runFfmpeg(args, onProgress, signal, stdin) {
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpegPath, ['-hide_banner', '-y', ...args], { windowsHide: true });
+    if (stdin) { child.stdin.on('error', () => {}); child.stdin.end(stdin); } // decoded pixels for formats FFmpeg cannot read
     let duration = 0;
     let tail = '';
     const toSec = (h, m, s) => Number(h) * 3600 + Number(m) * 60 + Number(s);
@@ -89,7 +94,7 @@ function imageSettings(outExt, opts) {
 }
 
 function ffmpegArgsFor(input, output, outExt, inputIsVideo, opts = {}) {
-  const a = ['-i', input];
+  const a = Array.isArray(input) ? [...input] : ['-i', input]; // `input` may be a ready-made list of input arguments
   if (!inputIsVideo && IMAGE_OUT.includes(outExt)) { // picture -> picture, with the user's quality / size / metadata settings
     const { vf, out } = imageSettings(outExt, opts);
     a.push('-frames:v', '1');
@@ -138,6 +143,7 @@ async function htmlToPdf(html, output) {
   }
 }
 
+const fileUrl = (p) => encodeURI('file:///' + p.split('\\').join('/'));
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const wrapHtml = (body) => `<!doctype html><html><head><meta charset="utf-8"><style>
 body{font-family:Segoe UI,Arial,sans-serif;line-height:1.5;max-width:800px;margin:0 auto;padding:24px;color:#111}
@@ -197,6 +203,25 @@ function runSoffice(input, outExt, output) {
   });
 }
 
+/** HEIC/HEIF -> picture: decode with libheif (WebAssembly), then hand the pixels to FFmpeg for the output format. */
+async function convertHeic(input, output, outExt, onProgress, signal, opts = {}) {
+  const decode = require('heic-decode');
+  const img = await decode({ buffer: fs.readFileSync(input) });
+  const rgba = Buffer.from(img.data.buffer, img.data.byteOffset, img.data.byteLength);
+  const rawIn = ['-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${img.width}x${img.height}`, '-i', 'pipe:0'];
+  if (outExt === 'pdf') {
+    const tmp = path.join(os.tmpdir(), `fc-heic-${Date.now()}-${Math.random().toString(36).slice(2)}.png`);
+    try {
+      await runFfmpeg(ffmpegArgsFor(rawIn, tmp, 'png', false, opts), () => {}, signal, rgba);
+      await htmlToPdf(wrapHtml(`<img src="${fileUrl(tmp)}" style="max-width:100%;max-height:260mm">`), output);
+    } finally {
+      fs.rmSync(tmp, { force: true });
+    }
+    return;
+  }
+  await runFfmpeg(ffmpegArgsFor(rawIn, output, outExt, false, opts), onProgress, signal, rgba);
+}
+
 /** Camera RAW -> picture, by converting the largest JPEG preview stored inside the RAW file. */
 async function convertRaw(input, output, outExt, onProgress, signal, opts = {}) {
   const previews = extractPreviews(input);
@@ -225,6 +250,12 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   const outExt = path.extname(output).slice(1).toLowerCase();
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
+  if (isHeic(inExt)) {
+    await convertHeic(input, output, outExt, onProgress, signal, opts);
+    onProgress(1);
+    return;
+  }
+
   if (isRaw(inExt)) {
     await convertRaw(input, output, outExt, onProgress, signal, opts);
     onProgress(1);
@@ -232,7 +263,7 @@ async function convert({ input, output, onProgress, signal, opts = {} }) {
   }
 
   const isMedia = AUDIO.includes(inExt) || VIDEO.includes(inExt) || IMAGE.includes(inExt) ||
-    ['ico', 'avif', 'heic', 'flv', 'wmv', 'm4v', 'mpg', '3gp', 'amr', 'aiff', 'ac3'].includes(inExt);
+    ['ico', 'avif', 'flv', 'wmv', 'm4v', 'mpg', '3gp', 'amr', 'aiff', 'ac3'].includes(inExt);
 
   if (isMedia && outExt === 'pdf') {
     const url = 'file:///' + input.replace(/\\/g, '/');

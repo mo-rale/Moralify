@@ -123,6 +123,7 @@ ipcMain.handle('convert', async (e, { id, input, format, outDir, opts }) => {
     });
     return { ok: true, output };
   } catch (err) {
+    fs.rmSync(output, { force: true }); // never leave a half-written file behind
     return { ok: false, error: err.message };
   } finally {
     jobs.delete(id);
@@ -130,7 +131,7 @@ ipcMain.handle('convert', async (e, { id, input, format, outDir, opts }) => {
 });
 
 // ---- batch: convert a whole list of files (a folder) into one output folder, keeping the subfolder layout ----
-const LIGHT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'ico', 'avif', 'heic'];
+const LIGHT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'ico', 'avif']; // HEIC and RAW load whole photos in memory: one at a time
 ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName, opts }) => {
   const root = path.join(outDir || defaultOut(), String(rootName || 'Converted').replace(/[<>:"/\\|?*]/g, '_'));
   const job = { cancelled: false, kills: new Set(), kill() { this.kills.forEach((k) => k()); } };
@@ -150,13 +151,15 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName,
       const signal = { cancelled: false };
       const kill = () => { signal.cancelled = true; if (signal.kill) signal.kill(); };
       job.kills.add(kill);
+      let output;
       try {
         const sub = path.dirname(f.rel.split('/').join(path.sep));
         const dir = sub === '.' ? root : path.join(root, sub);
-        const output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved);
+        output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved);
         await convert({ input: f.path, output, signal, opts, onProgress: () => {} });
         done++;
       } catch (err) {
+        if (output) fs.rmSync(output, { force: true });
         if (!job.cancelled) failed.push({ path: f.path, error: err.message });
       } finally {
         job.kills.delete(kill);

@@ -115,6 +115,9 @@ button.quiet:disabled { opacity: .4; cursor: default; }
 #go { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 12px; padding: 10px 24px; font-weight: 600; font-size: 14.5px; transition: background .15s; }
 #go:hover:not(:disabled) { background: var(--accent-h); }
 #go:disabled { background: var(--soft); color: var(--mute); cursor: default; }
+.stop { background: transparent; color: var(--err); border: 1px solid var(--err); border-radius: 12px; padding: 10px 24px; font-weight: 600; font-size: 14.5px; transition: .15s; }
+.stop:hover:not(:disabled) { background: var(--err); color: var(--bg); }
+.stop:disabled { opacity: .6; cursor: default; }
 button.link { background: none; border: 0; color: var(--accent); text-decoration: underline; padding: 0 0 0 8px; font: inherit; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
