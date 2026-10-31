@@ -261,9 +261,9 @@ function developRaw(input, outTiff, signal) {
   });
 }
 
-/** Camera RAW -> picture. Develops the real sensor data with LibRaw when it is available; otherwise (or if that fails) uses the JPEG preview inside the file. */
+/** Camera RAW -> picture. Uses the camera's JPEG preview by default (instant, looks like the camera's own picture); with `rawMode: 'full'` it develops the real sensor data with LibRaw instead, falling back to the preview if that fails. */
 async function convertRaw(input, output, outExt, onProgress, signal, opts = {}) {
-  if (opts.rawMode !== 'preview' && findLibraw()) {
+  if (opts.rawMode === 'full' && findLibraw()) {
     const tiff = path.join(os.tmpdir(), `fc-dev-${Date.now()}-${Math.random().toString(36).slice(2)}.tiff`);
     try {
       await developRaw(input, tiff, signal);

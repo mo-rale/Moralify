@@ -16,7 +16,7 @@ const FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 // ---------- picture options (quality / max size), remembered between sessions ----------
 const OPT_KEY = 'moralify.pictureOptions';
 const SIZES = [0, 3840, 1920, 1280, 800];
-let pic = { quality: 95, maxSize: 0, rawMode: 'full' };
+let pic = { quality: 95, maxSize: 0, rawMode: 'preview' };
 let hasLibraw = false;
 try {
   const saved = JSON.parse(localStorage.getItem(OPT_KEY) || '{}');
@@ -26,7 +26,7 @@ try {
 } catch { /* storage unavailable: use the defaults */ }
 const picOpts = () => ({ quality: pic.quality, maxSize: pic.maxSize, custom: pic.quality !== 95 || pic.maxSize > 0, rawMode: hasLibraw ? pic.rawMode : 'preview' });
 const rawText = () => (hasLibraw && pic.rawMode === 'full'
-  ? 'Ready · develops the full RAW data (slower, best quality)'
+  ? 'Ready · develops the full RAW data (slower, neutral look)'
   : 'Ready · converts the photo’s built-in preview, not the full RAW data');
 function refreshRawStatus() {
   for (const i of items.values()) {
@@ -45,7 +45,7 @@ function renderOpts() {
   $('qual').value = pic.quality;
   $('qualVal').textContent = `${pic.quality}%`;
   $('optsSum').textContent = `· Quality ${pic.quality}% · ${pic.maxSize ? `max ${pic.maxSize} px` : 'original size'}`;
-  $('rawModes').replaceChildren(...[['full', 'Develop'], ['preview', 'Camera preview']].map(([m, label]) => el('button', { type: 'button', className: 'chip' + (m === pic.rawMode ? ' on' : ''), textContent: label, onclick: () => setPic({ rawMode: m }) })));
+  $('rawModes').replaceChildren(...[['preview', 'Camera preview'], ['full', 'Develop']].map(([m, label]) => el('button', { type: 'button', className: 'chip' + (m === pic.rawMode ? ' on' : ''), textContent: label, onclick: () => setPic({ rawMode: m }) })));
   $('sizes').replaceChildren(...SIZES.map((n) => el('button', { type: 'button', className: 'chip' + (n === pic.maxSize ? ' on' : ''), textContent: n ? `${n} px` : 'Original', onclick: () => setPic({ maxSize: n }) })));
 }
 
@@ -385,7 +385,7 @@ $('clear').onclick = () => {
 
 $('qual').oninput = (e) => setPic({ quality: Number(e.target.value) });
 $('emailPreset').onclick = () => setPic({ quality: 75, maxSize: 1600 });
-$('optsReset').onclick = () => setPic({ quality: 95, maxSize: 0, rawMode: 'full' });
+$('optsReset').onclick = () => setPic({ quality: 95, maxSize: 0, rawMode: 'preview' });
 api.hasLibraw().then((has) => { hasLibraw = has; $('rawRow').hidden = !has; renderOpts(); refreshRawStatus(); });
 renderOpts();
 

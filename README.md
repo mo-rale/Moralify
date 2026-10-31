@@ -42,7 +42,7 @@ Moralify follows your Windows light or dark theme:
 | Images: png, jpg, webp, bmp, gif, tiff | other image formats, PDF |
 | iPhone photos: heic, heif | png, jpg, webp, bmp, gif, tiff, PDF |
 | pdf | png, jpg, webp: one picture per page, saved in a folder named like the PDF |
-| Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (developed with LibRaw, see the note below) |
+| Camera RAW: cr3, cr2, nef, arw, dng, raf, orf, rw2 and similar | png, jpg, webp, bmp, gif, tiff, PDF (see the note below) |
 | docx | pdf, html, txt |
 | md | pdf, html, txt |
 | html | pdf, txt |
@@ -51,7 +51,7 @@ Moralify follows your Windows light or dark theme:
 **With [LibreOffice](https://www.libreoffice.org/) installed** (detected automatically):
 doc, xls, xlsx, ppt, pptx, odt, ods, odp and rtf can be converted to PDF and other document formats, and docx can also become odt or rtf.
 
-**About camera RAW:** by default Moralify *develops* the real sensor data with [LibRaw](https://www.libraw.org/) (camera white balance, sRGB colours, highlight blending), so you get a proper full-resolution picture; PNG and TIFF keep 16-bit depth. Develop is slower than the alternative, which is **Camera preview** (Picture options → RAW photos): it converts the full-size JPEG the camera stores inside every RAW file, which is instant but can be lower resolution. If a file cannot be developed, Moralify falls back to its preview and says so in the status line.
+**About camera RAW:** by default Moralify converts the full-size JPEG that the camera stores inside every RAW file. It is instant and looks like the picture on the camera's screen (colours, contrast and sharpening from the camera's picture style); for many cameras it is the full resolution, but on some it is smaller than the sensor image. For editing, switch **Picture options → RAW photos** to **Develop**: Moralify then develops the real sensor data with [LibRaw](https://www.libraw.org/) into a neutral, full-resolution picture (PNG and TIFF keep 16-bit depth). That is slower (about 10 seconds for a 24-megapixel photo) and looks flatter than the camera's JPEG because it has no picture style. If a file cannot be developed, Moralify falls back to its preview and says so in the status line.
 
 **Not supported yet:** PDF to Word/text.
 
