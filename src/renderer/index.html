@@ -34,6 +34,15 @@
         <button id="folderBtn" class="folder-btn" type="button">Add folder</button>
       </div>
 
+      <details id="opts" class="opts" hidden>
+        <summary>Picture options <span id="optsSum"></span></summary>
+        <div class="opts-body">
+          <div class="orow"><span class="lab">Quality</span><input id="qual" type="range" min="40" max="100" step="5" aria-label="JPG and WEBP quality"><b id="qualVal"></b><span class="hint">JPG and WEBP</span></div>
+          <div class="orow"><span class="lab">Max size</span><span id="sizes" class="chips"></span><span class="hint">longest side, never enlarged</span></div>
+          <div class="orow"><button id="emailPreset" class="chip shortcut" type="button">Compress for email</button><button id="optsReset" class="quiet" type="button">Reset</button></div>
+        </div>
+      </details>
+
       <div id="bulk" class="bulk" hidden></div>
 
       <ul id="list"></ul>

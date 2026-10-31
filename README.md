@@ -10,6 +10,7 @@ A free, open source Windows desktop app that converts audio, video, image and do
 
 - Drag and drop files, or click to browse. Convert many files at once.
 - **Batch convert a whole folder:** drop a folder on the window, or click **Add folder**. Pick the file types to include (for example only PNG), pick the output format (for example JPG), and Moralify converts everything in it, subfolders too. Results go to `Documents\Moralify\<folder name>` with the same subfolder layout, and files that are already in the target format are skipped.
+- **Picture options:** set the JPG/WEBP quality and a maximum size (longest side, never enlarged), or use **Compress for email**. The settings apply to single files and whole folders and are remembered. Converted pictures never carry over location or camera data (except RAW to JPG with default settings, which copies the camera's own JPEG as is).
 - Pick the output format for each file by clicking a format button (`MP3 → WAV OGG FLAC ...`).
 - Batch shortcuts: **All videos → MP3** pulls the audio out of every video in the queue, and **Set all to** applies one format to every file that supports it.
 - Per-file progress, with a "Show" link to the converted file.

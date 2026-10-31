@@ -71,8 +71,33 @@ function runFfmpeg(args, onProgress, signal) {
   });
 }
 
-function ffmpegArgsFor(input, output, outExt, inputIsVideo) {
+const IMAGE_OUT = ['jpg', 'png', 'webp', 'bmp', 'tiff', 'gif'];
+
+/**
+ * Picture-output settings: quality (JPG/WEBP) and the longest side in px (never enlarges).
+ * FFmpeg already leaves EXIF/GPS data out of every picture it writes, so there is no separate option for that.
+ * Returns the extra ffmpeg arguments; `vf` is the resize filter, if any.
+ */
+function imageSettings(outExt, opts) {
+  const q = Math.min(100, Math.max(1, Math.round(Number(opts.quality) || 95)));
+  const max = Math.round(Number(opts.maxSize) || 0);
+  const vf = max > 0 ? `scale=w=min(iw\\,${max}):h=min(ih\\,${max}):force_original_aspect_ratio=decrease` : null;
+  const out = [];
+  if (outExt === 'jpg') out.push('-q:v', String(Math.round(31 - (q / 100) * 29))); // 100 -> 2 (best) ... 1 -> 31 (smallest)
+  if (outExt === 'webp') out.push('-quality', String(q));
+  return { vf, out };
+}
+
+function ffmpegArgsFor(input, output, outExt, inputIsVideo, opts = {}) {
   const a = ['-i', input];
+  if (!inputIsVideo && IMAGE_OUT.includes(outExt)) { // picture -> picture, with the user's quality / size / metadata settings
+    const { vf, out } = imageSettings(outExt, opts);
+    a.push('-frames:v', '1');
+    if (outExt === 'gif') a.push('-vf', vf || 'scale=iw:-1', '-loop', '0');
+    else if (vf) a.push('-vf', vf);
+    a.push(...out, output);
+    return a;
+  }
   switch (outExt) {
     case 'mp3': a.push('-vn', '-c:a', 'libmp3lame', '-q:a', '2'); break;
     case 'ogg': a.push('-vn', '-c:a', 'libvorbis', '-q:a', '5'); break;
@@ -173,7 +198,7 @@ function runSoffice(input, outExt, output) {
 }
 
 /** Camera RAW -> picture, by converting the largest JPEG preview stored inside the RAW file. */
-async function convertRaw(input, output, outExt, onProgress, signal) {
+async function convertRaw(input, output, outExt, onProgress, signal, opts = {}) {
   const previews = extractPreviews(input);
   if (!previews.length) throw new Error('No preview image found inside this RAW file.');
   let lastError;
@@ -181,9 +206,9 @@ async function convertRaw(input, output, outExt, onProgress, signal) {
     const tmp = path.join(os.tmpdir(), `fc-raw-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
     fs.writeFileSync(tmp, pv.bytes);
     try {
-      if (outExt === 'jpg') fs.copyFileSync(tmp, output); // already a JPEG: no re-compression
+      if (outExt === 'jpg' && !opts.custom) fs.copyFileSync(tmp, output); // already a JPEG: no re-compression
       else if (outExt === 'pdf') await htmlToPdf(wrapHtml(`<img src="${encodeURI('file:///' + tmp.replace(/\\/g, '/'))}" style="max-width:100%;max-height:260mm">`), output);
-      else await runFfmpeg(ffmpegArgsFor(tmp, output, outExt, false), onProgress, signal);
+      else await runFfmpeg(ffmpegArgsFor(tmp, output, outExt, false, opts), onProgress, signal);
       return;
     } catch (e) {
       lastError = e;
@@ -195,13 +220,13 @@ async function convertRaw(input, output, outExt, onProgress, signal) {
   throw lastError;
 }
 
-async function convert({ input, output, onProgress, signal }) {
+async function convert({ input, output, onProgress, signal, opts = {} }) {
   const inExt = norm(path.extname(input).slice(1).toLowerCase());
   const outExt = path.extname(output).slice(1).toLowerCase();
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
   if (isRaw(inExt)) {
-    await convertRaw(input, output, outExt, onProgress, signal);
+    await convertRaw(input, output, outExt, onProgress, signal, opts);
     onProgress(1);
     return;
   }
@@ -214,7 +239,7 @@ async function convert({ input, output, onProgress, signal }) {
     await htmlToPdf(wrapHtml(`<img src="${encodeURI(url)}" style="max-width:100%;max-height:260mm">`), output);
   } else if (isMedia) {
     const isVideo = !AUDIO.includes(inExt) && !IMAGE.includes(inExt);
-    await runFfmpeg(ffmpegArgsFor(input, output, outExt, isVideo), onProgress, signal);
+    await runFfmpeg(ffmpegArgsFor(input, output, outExt, isVideo, opts), onProgress, signal);
   } else if (inExt === 'pdf' && outExt === 'png') {
     throw new Error('PDF to image is not supported yet.');
   } else if (OFFICE.includes(inExt) && !(inExt === 'docx' && ['html', 'txt'].includes(outExt)) &&

@@ -109,7 +109,7 @@ ipcMain.handle('inspect-paths', (_e, paths) => paths.map((p) => {
   }
 }));
 
-ipcMain.handle('convert', async (e, { id, input, format, outDir }) => {
+ipcMain.handle('convert', async (e, { id, input, format, outDir, opts }) => {
   const dir = outDir || defaultOut();
   const base = path.basename(input, path.extname(input));
   // Never overwrite the source or an existing file.
@@ -118,7 +118,7 @@ ipcMain.handle('convert', async (e, { id, input, format, outDir }) => {
   jobs.set(id, signal);
   try {
     await convert({
-      input, output, signal,
+      input, output, signal, opts,
       onProgress: (p) => e.sender.send('progress', { id, progress: p }),
     });
     return { ok: true, output };
@@ -131,7 +131,7 @@ ipcMain.handle('convert', async (e, { id, input, format, outDir }) => {
 
 // ---- batch: convert a whole list of files (a folder) into one output folder, keeping the subfolder layout ----
 const LIGHT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'ico', 'avif', 'heic'];
-ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName }) => {
+ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName, opts }) => {
   const root = path.join(outDir || defaultOut(), String(rootName || 'Converted').replace(/[<>:"/\\|?*]/g, '_'));
   const job = { cancelled: false, kills: new Set(), kill() { this.kills.forEach((k) => k()); } };
   jobs.set(id, job);
@@ -154,7 +154,7 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName 
         const sub = path.dirname(f.rel.split('/').join(path.sep));
         const dir = sub === '.' ? root : path.join(root, sub);
         const output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved);
-        await convert({ input: f.path, output, signal, onProgress: () => {} });
+        await convert({ input: f.path, output, signal, opts, onProgress: () => {} });
         done++;
       } catch (err) {
         if (!job.cancelled) failed.push({ path: f.path, error: err.message });

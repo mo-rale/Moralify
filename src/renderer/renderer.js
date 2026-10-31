@@ -5,11 +5,34 @@ let defaultDir = '';
 let nextId = 1;
 let running = false;
 
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 const baseName = (p) => p.split(/[\\/]/).pop();
 const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
 const NORM = { jpeg: 'jpg', tif: 'tiff', htm: 'html', markdown: 'md', oga: 'ogg' };
 const norm = (e) => NORM[e] || e;
 const FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+// ---------- picture options (quality / max size), remembered between sessions ----------
+const OPT_KEY = 'moralify.pictureOptions';
+const SIZES = [0, 3840, 1920, 1280, 800];
+let pic = { quality: 95, maxSize: 0 };
+try {
+  const saved = JSON.parse(localStorage.getItem(OPT_KEY) || '{}');
+  if (saved.quality >= 40 && saved.quality <= 100) pic.quality = Math.round(saved.quality);
+  if (SIZES.includes(saved.maxSize)) pic.maxSize = saved.maxSize;
+} catch { /* storage unavailable: use the defaults */ }
+const picOpts = () => ({ quality: pic.quality, maxSize: pic.maxSize, custom: pic.quality !== 95 || pic.maxSize > 0 });
+function setPic(next) {
+  pic = { ...pic, ...next };
+  try { localStorage.setItem(OPT_KEY, JSON.stringify(pic)); } catch { /* ignore */ }
+  renderOpts();
+}
+function renderOpts() {
+  $('qual').value = pic.quality;
+  $('qualVal').textContent = `${pic.quality}%`;
+  $('optsSum').textContent = `· Quality ${pic.quality}% · ${pic.maxSize ? `max ${pic.maxSize} px` : 'original size'}`;
+  $('sizes').replaceChildren(...SIZES.map((n) => el('button', { type: 'button', className: 'chip' + (n === pic.maxSize ? ' on' : ''), textContent: n ? `${n} px` : 'Original', onclick: () => setPic({ maxSize: n }) })));
+}
 
 api.defaultOut().then((d) => { defaultDir = d; outDir = d; setOut(d); });
 api.hasLibreOffice().then((has) => { if (has) $('loNote').textContent = ' Office files work too.'; });
@@ -20,7 +43,6 @@ function setOut(dir) {
   $('outReset').hidden = dir === defaultDir;
 }
 
-const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 
 async function addPaths(paths) {
   const found = await api.inspectPaths(paths);
@@ -201,6 +223,7 @@ function renderBulk() {
 
 function refresh() {
   renderBulk();
+  $('opts').hidden = !items.size;
   const all = [...items.values()];
   const ready = all.reduce((n, i) => n + (i.group ? groupPlan(i).todo.length : (i.supported ? 1 : 0)), 0);
   const folders = all.filter((i) => i.group).length;
@@ -233,7 +256,7 @@ async function runFolder(id, g) {
   g.status.className = 'status';
   g.status.textContent = `Converting… 0 / ${todo.length.toLocaleString()}`;
   g.bar.firstChild.style.width = '0';
-  const res = await api.convertBatch({ id, files: todo.map((f) => ({ path: f.path, rel: f.rel, ext: f.ext })), format: g.format, outDir, rootName: g.name });
+  const res = await api.convertBatch({ id, files: todo.map((f) => ({ path: f.path, rel: f.rel, ext: f.ext })), format: g.format, outDir, rootName: g.name, opts: picOpts() });
   g.running = false; g.finished = true;
   renderGroup(g);
   const nf = res.failed.length;
@@ -256,7 +279,7 @@ $('go').onclick = async () => {
     it.status.className = 'status';
     it.status.textContent = 'Converting…';
     it.bar.style.width = '0';
-    const res = await api.convert({ id, input: it.path, format: it.format, outDir });
+    const res = await api.convert({ id, input: it.path, format: it.format, outDir, opts: picOpts() });
     it.chips.forEach((c) => (c.disabled = false));
     if (res.ok) {
       it.bar.style.width = '100%';
@@ -280,6 +303,11 @@ $('clear').onclick = () => {
   $('list').innerHTML = '';
   refresh();
 };
+
+$('qual').oninput = (e) => setPic({ quality: Number(e.target.value) });
+$('emailPreset').onclick = () => setPic({ quality: 75, maxSize: 1600 });
+$('optsReset').onclick = () => setPic({ quality: 95, maxSize: 0 });
+renderOpts();
 
 const browse = async () => addPaths(await api.pickFiles());
 $('drop').onclick = browse;
