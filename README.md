@@ -57,7 +57,7 @@ doc, xls, xlsx, ppt, pptx, odt, ods, odp and rtf can be converted to PDF and oth
 
 ## Install
 
-Download `Moralify Setup 1.0.0.exe` (from the Releases page, or build it yourself, see below) and run it. The setup:
+Download `Moralify Setup 1.1.0.exe` (from the Releases page, or build it yourself, see below) and run it. The setup:
 
 1. Shows the terms and conditions, which you must accept.
 2. Lets you choose the install folder.

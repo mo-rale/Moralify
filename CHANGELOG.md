@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.0.0
+## 1.1.0
 
-First public release of Moralify, a free, open source Windows app that converts audio, video, pictures and documents on your own computer.
+A large update to the first release (1.0.0): Moralify is a free, open source Windows app that converts audio, video, pictures and documents on your own computer.
 
 **Converting**
 - Audio (mp3, wav, ogg, flac, aac, m4a, opus, wma) and video (mp4, mkv, webm, avi, mov, plus GIF and audio-only output).
