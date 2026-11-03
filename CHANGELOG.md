@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- New Moralify logo: a new app and installer icon, the full logo on the start screen (it follows the light or dark theme) and a banner in the README.
+- The header shows only the icon until you add files, so the name is never repeated.
+
 ## 1.1.0
 
 A large update to the first release (1.0.0): Moralify is a free, open source Windows app that converts audio, video, pictures and documents on your own computer.
