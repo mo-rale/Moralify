@@ -1,7 +1,11 @@
 name: Release
 
-# Builds the Windows installer. Push a tag such as v1.1.0 to publish it on the Releases page,
+# Builds the Windows installer. Push a tag such as v1.1.2 to publish it on the Releases page,
 # or run the workflow by hand to just get the installer as a downloadable build artifact.
+#
+# Code signing: once SignPath is set up (see docs/CODE_SIGNING.md) and the repository variable
+# SIGNPATH_ORGANIZATION_ID exists, tagged builds are signed before they are published.
+# Until then the installer is published unsigned, exactly as before.
 on:
   push:
     tags: ['v*']
@@ -9,10 +13,11 @@ on:
 
 permissions:
   contents: write
+  actions: read   # SignPath reads this run to verify that the installer was built from this repository
 
 jobs:
   installer:
-    runs-on: windows-latest
+    runs-on: windows-latest   # SignPath's open source policy requires GitHub-hosted runners
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,12 +26,48 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run dist
+
+      - name: Upload the unsigned installer
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moralify-Setup-unsigned
+          path: dist/*.exe
+
+      - name: Sign the installer with SignPath
+        id: sign
+        if: startsWith(github.ref, 'refs/tags/') && vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: moralify
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200   # every release is approved by hand in SignPath
+          output-artifact-directory: signed
+
+      - name: Choose what to publish
+        id: pick
+        shell: pwsh
+        run: |
+          if ('${{ steps.sign.outcome }}' -eq 'success') {
+            'files=signed/*.exe' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            'body=Code signing policy: free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/). See the [README](https://github.com/${{ github.repository }}#code-signing-policy).' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            'files=dist/*.exe' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            'body=' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: Moralify-Setup
-          path: dist/*.exe
+          path: ${{ steps.pick.outputs.files }}
+
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/*.exe
+          files: ${{ steps.pick.outputs.files }}
+          body: ${{ steps.pick.outputs.body }}
           generate_release_notes: true

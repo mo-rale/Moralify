@@ -113,6 +113,19 @@ The bundled FFmpeg binary is distributed under the GNU GPL; see <https://ffmpeg.
 
 The demo video's music is "Happy Beats / Business Moves vol. 9" by Sascha Ende ([ende.app](https://ende.app)), licensed CC BY 4.0.
 
+## Code signing policy
+
+Release installers are built from this repository by the GitHub workflow in `.github/workflows/release.yml`, and every release is approved by hand before it is signed. Setting up signing is described in [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md); until it is approved, installers are not signed.
+
+<!-- Uncomment this line once SignPath has approved the project:
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+-->
+
+- **Committers and reviewers:** [Morale](https://github.com/mo-rale)
+- **Approvers:** [Morale](https://github.com/mo-rale)
+
+**Privacy policy:** This program will not transfer any information to other networked systems unless specifically requested by the user.
+
 ## License
 
 [MIT](LICENSE) © 2026 Morale

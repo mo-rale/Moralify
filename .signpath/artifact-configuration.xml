@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration for Moralify.
+  Copy this into SignPath (Project -> Artifact configurations) and give it the slug "initial".
+  The GitHub workflow uploads the installer as a zip file; the installer inside is signed with Authenticode.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="Moralify Setup *.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
