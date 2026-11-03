@@ -22,6 +22,9 @@ body { height: 100vh; display: flex; flex-direction: column; background: var(--b
 .top { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; font: 600 20px var(--serif); letter-spacing: -.2px; }
 .brand img { border-radius: 8px; display: block; }
+/* the start screen already shows the full logo, so the name only appears in the header once files are queued */
+.brand span { display: none; }
+body:has(#empty.hide) .brand span { display: inline; }
 .dest { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .pill { font-size: 12.5px; color: var(--mute); background: var(--soft); border-radius: 999px; padding: 4px 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 4px; }
 
@@ -30,7 +33,9 @@ main::-webkit-scrollbar { width: 10px; }
 main::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 5px; border: 3px solid var(--bg); }
 
 /* greeting */
-.hello { text-align: center; padding: 44px 0 26px; }
+.hello { text-align: center; padding: 30px 0 26px; }
+.hello .logo { display: block; margin: 0 auto 18px; }
+.hello .logo img { display: block; margin: 0 auto; height: auto; }
 .hello.hide { display: none; }
 .hello h1 { margin: 0 0 10px; font: 400 40px/1.15 var(--serif); letter-spacing: -.8px; }
 .hello h1 em { font-style: italic; color: var(--accent); }

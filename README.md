@@ -1,4 +1,9 @@
-# Moralify
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="build/logo/moralify-logo-white.svg">
+    <img src="build/logo/moralify-logo-dark.svg" alt="Moralify" width="300">
+  </picture>
+</h1>
 
 A free, open source Windows desktop app that converts audio, video, image and document files. Everything runs on your machine; nothing is uploaded.
 
