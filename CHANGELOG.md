@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2
+
+- Fixed conversions staying on "Converting..." forever on PCs where Windows' Documents folder points to a folder that no longer exists (for example a removed OneDrive folder). The default output folder now falls back to a Documents folder in your user profile.
+- Any failure now shows an error on the file's card, and the Convert button always comes back.
+- A progress bar with a percentage on every card. Folders show "N of M", the overall percentage and the file being converted.
+- Code signing groundwork for the release workflow (SignPath); installers stay unsigned until it is approved.
+
 ## 1.1.1
 
 - New Moralify logo: a new app and installer icon, the full logo on the start screen (it follows the light or dark theme) and a banner in the README.
