@@ -277,14 +277,19 @@ function refresh() {
 
 api.onProgress(({ id, progress }) => {
   const it = items.get(id);
-  if (it && !it.group) it.bar.style.width = `${Math.round(progress * 100)}%`;
+  if (!it || it.group) return;
+  if (progress > 0) it.li.classList.remove('ind'); // real progress has started: stop the "working" animation
+  it.bar.style.width = `${Math.round(progress * 100)}%`;
+  if (progress < 1) it.status.textContent = `Converting… ${Math.round(progress * 100)}%`;
 });
 
-api.onBatchProgress(({ id, done, failed, total }) => {
+api.onBatchProgress(({ id, done, failed, total, fraction, current }) => {
   const g = items.get(id);
   if (!g) return;
-  g.status.textContent = `Converting… ${(done + failed).toLocaleString()} / ${total.toLocaleString()}` + (failed ? ` · ${failed} failed` : '');
-  g.bar.firstChild.style.width = `${Math.round(((done + failed) / total) * 100)}%`;
+  if (fraction > 0) g.li.classList.remove('ind');
+  g.status.textContent = `Converting… ${(done + failed).toLocaleString()} of ${total.toLocaleString()} · ${Math.round(fraction * 100)}%`
+    + (current ? ` · ${current}` : '') + (failed ? ` · ${failed} failed` : '');
+  g.bar.firstChild.style.width = `${(fraction * 100).toFixed(1)}%`;
 });
 
 async function runFolder(id, g) {
@@ -293,11 +298,13 @@ async function runFolder(id, g) {
   g.running = true; g.finished = false;
   renderGroup(g);
   g.li.classList.remove('done');
+  g.li.classList.add('busy', 'ind');
   g.status.className = 'status';
-  g.status.textContent = `Converting… 0 / ${todo.length.toLocaleString()}`;
+  g.status.textContent = `Converting… 0 of ${todo.length.toLocaleString()}`;
   g.bar.firstChild.style.width = '0';
   const res = await api.convertBatch({ id, files: todo.map((f) => ({ path: f.path, rel: f.rel, ext: f.ext })), format: g.format, outDir, rootName: g.name, opts: picOpts() });
   g.running = false; g.finished = true;
+  g.li.classList.remove('busy', 'ind');
   renderGroup(g);
   const nf = res.failed.length;
   g.status.className = 'status ' + (nf ? 'err' : 'ok');
@@ -312,6 +319,7 @@ async function runMerge(set) {
   set.forEach((i) => {
     i.chips.forEach((c) => (c.disabled = true));
     i.li.classList.remove('done');
+    i.li.classList.add('busy', 'ind');
     i.status.className = 'status';
     i.status.textContent = 'Merging…';
     i.bar.style.width = '0';
@@ -319,6 +327,7 @@ async function runMerge(set) {
   const res = await api.mergePdf({ files: set.map((i) => i.path), outDir, name: 'Merged images', opts: picOpts() });
   set.forEach((i) => {
     i.chips.forEach((c) => (c.disabled = false));
+    i.li.classList.remove('busy', 'ind');
     if (res.ok) {
       i.bar.style.width = '100%';
       i.li.classList.add('done');
@@ -354,11 +363,13 @@ $('go').onclick = async () => {
     if (!it.supported) continue;
     it.chips.forEach((c) => (c.disabled = true));
     it.li.classList.remove('done');
+    it.li.classList.add('busy', 'ind');
     it.status.className = 'status';
     it.status.textContent = 'Converting…';
     it.bar.style.width = '0';
     const res = await api.convert({ id, input: it.path, format: it.format, outDir, opts: picOpts() });
     it.chips.forEach((c) => (c.disabled = false));
+    it.li.classList.remove('busy', 'ind');
     if (res.ok) {
       it.bar.style.width = '100%';
       it.li.classList.add('done');

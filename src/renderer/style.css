@@ -69,8 +69,12 @@ li { position: relative; overflow: hidden; background: var(--surface); border: 1
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .chip.on:hover:not(:disabled) { color: var(--on-accent); background: var(--accent-h); }
 .chip:disabled { cursor: default; opacity: .55; } .chip.on:disabled { opacity: 1; }
-.bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
-.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.bar { grid-column: 2 / -1; height: 8px; margin-top: 10px; border-radius: 4px; background: var(--soft); overflow: hidden; display: none; }
+li.busy .bar, li.done .bar { display: block; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; border-radius: 4px; }
+/* before real progress is known (pictures, or the first seconds of a video) the bar sweeps back and forth */
+li.busy.ind .bar i { width: 30% !important; transition: none; animation: indet 1.1s ease-in-out infinite; }
+@keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 li.done .bar i { background: var(--ok); }
 .x { background: none; border: 0; color: var(--mute); font-size: 20px; line-height: 1; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
 .x:hover { background: var(--soft); color: var(--ink); }

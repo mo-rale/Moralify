@@ -161,11 +161,23 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName,
   let next = 0;
   // Small pictures convert fast enough to run side by side; everything else one at a time.
   const light = LIGHT.includes(format) && files.every((f) => LIGHT.includes(f.ext));
-  const send = () => { try { e.sender.send('batch-progress', { id, done, failed: failed.length, total: files.length }); } catch { /* window closed */ } };
+  const partial = new Map();   // file number -> how far the file being converted has got (0..1)
+  const inflight = new Map();  // file number -> its name
+  let lastSent = 0;
+  const send = (force = true) => {
+    const now = Date.now();
+    if (!force && now - lastSent < 200) return;
+    lastSent = now;
+    const part = [...partial.values()].reduce((a, b) => a + b, 0);
+    const fraction = Math.min(1, (done + failed.length + part) / files.length);
+    const current = [...inflight.values()][0] || '';
+    try { e.sender.send('batch-progress', { id, done, failed: failed.length, total: files.length, fraction, current }); } catch { /* window closed */ }
+  };
 
   const worker = async () => {
     while (!job.cancelled) {
-      const f = files[next++];
+      const i = next++;
+      const f = files[i];
       if (!f) return;
       const signal = { cancelled: false };
       const kill = () => { signal.cancelled = true; if (signal.kill) signal.kill(); };
@@ -175,12 +187,16 @@ ipcMain.handle('convert-batch', async (e, { id, files, format, outDir, rootName,
         const sub = path.dirname(f.rel.split('/').join(path.sep));
         const dir = sub === '.' ? root : path.join(root, sub);
         output = uniqueOutput(dir, path.basename(f.path, path.extname(f.path)), format, reserved, makesFolder(f.path, format));
-        await convert({ input: f.path, output, signal, opts, onProgress: () => {} });
+        inflight.set(i, path.basename(f.path));
+        send();
+        await convert({ input: f.path, output, signal, opts, onProgress: (p) => { partial.set(i, p); send(false); } });
         done++;
       } catch (err) {
         if (output) fs.rmSync(output, { force: true });
         if (!job.cancelled) failed.push({ path: f.path, error: err.message });
       } finally {
+        partial.delete(i);
+        inflight.delete(i);
         job.kills.delete(kill);
         send();
       }
