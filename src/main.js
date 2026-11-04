@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { convert, targetsFor, findSoffice, findLibraw, mergeImagesToPdf } = require('./converters');
 const { isRaw } = require('./raw');
@@ -60,7 +61,16 @@ ipcMain.handle('targets', (_e, filePath) => targetsFor(path.extname(filePath).sl
 ipcMain.handle('is-raw', (_e, filePath) => isRaw(path.extname(filePath).slice(1)));
 ipcMain.handle('has-libreoffice', () => !!findSoffice());
 ipcMain.handle('has-libraw', () => !!findLibraw());
-const defaultOut = () => path.join(app.getPath('documents'), 'Moralify');
+// Where converted files go by default: a "Moralify" folder inside Documents. Windows can point the Documents
+// folder at a place that no longer exists (for example a OneDrive folder that was removed), and then Electron
+// throws, so fall back to a real Documents folder in the user's profile, and finally to the profile itself.
+const defaultOut = () => {
+  const candidates = [];
+  try { candidates.push(app.getPath('documents')); } catch { /* Documents is not available */ }
+  candidates.push(path.join(os.homedir(), 'Documents'));
+  const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
+  return path.join(candidates.find(isDir) || os.homedir(), 'Moralify');
+};
 ipcMain.handle('default-out', () => defaultOut());
 ipcMain.handle('open-folder', async (_e, dir) => {
   fs.mkdirSync(dir, { recursive: true });
@@ -129,20 +139,21 @@ ipcMain.handle('inspect-paths', (_e, paths) => paths.map((p) => {
 }));
 
 ipcMain.handle('convert', async (e, { id, input, format, outDir, opts }) => {
-  const dir = outDir || defaultOut();
-  const base = path.basename(input, path.extname(input));
-  // Never overwrite the source or an existing file.
-  const output = uniqueOutput(dir, base, format, new Set(), makesFolder(input, format));
   const signal = { cancelled: false };
   jobs.set(id, signal);
+  let output;
   try {
+    const dir = outDir || defaultOut();
+    const base = path.basename(input, path.extname(input));
+    // Never overwrite the source or an existing file.
+    output = uniqueOutput(dir, base, format, new Set(), makesFolder(input, format));
     const r = await convert({
       input, output, signal, opts,
       onProgress: (p) => e.sender.send('progress', { id, progress: p }),
     });
     return { ok: true, output: (r && r.output) || output, note: r && r.note };
   } catch (err) {
-    fs.rmSync(output, { force: true }); // never leave a half-written file behind
+    if (output) fs.rmSync(output, { force: true }); // never leave a half-written file behind
     return { ok: false, error: err.message };
   } finally {
     jobs.delete(id);

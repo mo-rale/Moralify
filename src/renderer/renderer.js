@@ -9,6 +9,13 @@ let stopRequested = false;
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 const baseName = (p) => p.split(/[\\/]/).pop();
 const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+// A call into the app can fail (for example if the output folder cannot be created). Turn that into an error
+// result so a card never stays stuck on "Converting…".
+const safe = async (call) => {
+  try { return await call(); } catch (e) {
+    return { ok: false, error: String((e && e.message) || e).replace(/^Error invoking remote method '[^']*': (Error: )?/, '') };
+  }
+};
 const NORM = { jpeg: 'jpg', tif: 'tiff', htm: 'html', markdown: 'md', oga: 'ogg' };
 const norm = (e) => NORM[e] || e;
 const FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
@@ -56,7 +63,8 @@ let lastFormats = {};
 try { lastFormats = JSON.parse(localStorage.getItem(FMT_KEY) || '{}') || {}; } catch { lastFormats = {}; }
 const remember = (key, value) => { try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch { /* ignore */ } };
 
-api.defaultOut().then((d) => {
+api.defaultOut().catch(() => '').then((d) => {
+  if (!d) return;
   defaultDir = d;
   let saved = null;
   try { saved = localStorage.getItem(OUT_KEY); } catch { /* ignore */ }
@@ -302,9 +310,18 @@ async function runFolder(id, g) {
   g.status.className = 'status';
   g.status.textContent = `Converting… 0 of ${todo.length.toLocaleString()}`;
   g.bar.firstChild.style.width = '0';
-  const res = await api.convertBatch({ id, files: todo.map((f) => ({ path: f.path, rel: f.rel, ext: f.ext })), format: g.format, outDir, rootName: g.name, opts: picOpts() });
-  g.running = false; g.finished = true;
+  const res = await safe(() => api.convertBatch({ id, files: todo.map((f) => ({ path: f.path, rel: f.rel, ext: f.ext })), format: g.format, outDir, rootName: g.name, opts: picOpts() }));
+  g.running = false;
   g.li.classList.remove('busy', 'ind');
+  if (res.ok === false) {
+    g.finished = false;
+    renderGroup(g);
+    g.bar.firstChild.style.width = '0';
+    g.status.className = 'status err';
+    g.status.textContent = res.error;
+    return;
+  }
+  g.finished = true;
   renderGroup(g);
   const nf = res.failed.length;
   g.status.className = 'status ' + (nf ? 'err' : 'ok');
@@ -324,7 +341,7 @@ async function runMerge(set) {
     i.status.textContent = 'Merging…';
     i.bar.style.width = '0';
   });
-  const res = await api.mergePdf({ files: set.map((i) => i.path), outDir, name: 'Merged images', opts: picOpts() });
+  const res = await safe(() => api.mergePdf({ files: set.map((i) => i.path), outDir, name: 'Merged images', opts: picOpts() }));
   set.forEach((i) => {
     i.chips.forEach((c) => (c.disabled = false));
     i.li.classList.remove('busy', 'ind');
@@ -348,7 +365,7 @@ $('stop').onclick = () => {
   for (const id of items.keys()) api.cancel(id); // only jobs that are running react
 };
 
-$('go').onclick = async () => {
+async function runAll() {
   running = true;
   stopRequested = false;
   $('stop').disabled = false;
@@ -367,7 +384,7 @@ $('go').onclick = async () => {
     it.status.className = 'status';
     it.status.textContent = 'Converting…';
     it.bar.style.width = '0';
-    const res = await api.convert({ id, input: it.path, format: it.format, outDir, opts: picOpts() });
+    const res = await safe(() => api.convert({ id, input: it.path, format: it.format, outDir, opts: picOpts() }));
     it.chips.forEach((c) => (c.disabled = false));
     it.li.classList.remove('busy', 'ind');
     if (res.ok) {
@@ -383,8 +400,10 @@ $('go').onclick = async () => {
     }
   }
   if (doMerge && !stopRequested) await runMerge(mergeSet);
-  running = false;
-  refresh();
+}
+
+$('go').onclick = async () => {
+  try { await runAll(); } finally { running = false; refresh(); } // whatever happens, give the buttons back
 };
 
 $('clear').onclick = () => {
